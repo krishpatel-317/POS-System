@@ -1,27 +1,30 @@
-﻿//One complete bill/transaction
-using System.Net.ServerSentEvents;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
+// One complete bill/transaction
 namespace POSSystem.Models
 {
     public class Sale
     {
+        [Key]
         public int SaleId { get; set; }
 
+        [Required]
         public DateTime SaleDate { get; set; }
 
+        [Required]
         public decimal TotalAmount { get; set; }
 
-        // Customer Foreign Key
+        [ForeignKey("Customer")]
         public int? CustomerId { get; set; }
 
-        // Customer Navigation Property
         public Customer? Customer { get; set; }
 
         // User/Cashier Foreign Key
+        [ForeignKey("User")]
         public int UserId { get; set; }
 
-        // User Navigation Property
-        public User User { get; set; } = null!;
+        public User User { get; set; }
 
         // One Sale -> Many SaleItems
         public ICollection<SaleItem> SaleItems { get; set; }

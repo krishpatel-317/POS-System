@@ -1,20 +1,26 @@
-﻿//Money / payment information for the bill
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+// Money / payment information for the bill
 namespace POSSystem.Models
 {
     public class Payment
     {
+        [Key]
         public int PaymentId { get; set; }
 
+        [Required]
         public decimal Amount { get; set; }
 
+        [Required]
         public string PaymentMethod { get; set; } = string.Empty;
 
+        [Required]
         public DateTime PaymentDate { get; set; }
 
-        // Sale Foreign Key
+        [ForeignKey("Sale")]
         public int SaleId { get; set; }
 
-        // Sale Navigation Property
         public Sale Sale { get; set; } = null!;
     }
 }

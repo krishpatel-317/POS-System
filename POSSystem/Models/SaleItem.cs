@@ -1,26 +1,31 @@
-﻿//Individual products inside that bill
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+// Individual products inside that bill
 namespace POSSystem.Models
 {
     public class SaleItem
     {
+        [Key]
         public int SaleItemId { get; set; }
 
-        // Sale Foreign Key
+        [ForeignKey("Sale")]
         public int SaleId { get; set; }
 
-        // Sale Navigation Property
-        public Sale Sale { get; set; } = null!;
+        public Sale Sale { get; set; }
 
-        // Product Foreign Key
+        [ForeignKey("Product")]
         public int ProductId { get; set; }
 
-        // Product Navigation Property
-        public Product Product { get; set; } = null!;
+        public Product Product { get; set; }
 
+        [Required]
         public int Quantity { get; set; }
 
+        [Required]
         public decimal UnitPrice { get; set; }
 
+        [Required]
         public decimal TotalPrice { get; set; }
     }
 }
