@@ -1,0 +1,254 @@
+@{ 
+    ViewData["Title"] = "New Sale";
+    var availableProducts = ViewBag.AvailableProducts as IEnumerable<POSSystem.Models.Product> ?? Enumerable.Empty<POSSystem.Models.Product>();
+}
+
+<div class="row g-4">
+    <!-- Left Column: Product Selection & Cart Items -->
+    <div class="col-lg-8">
+        <div class="card-theme">
+            <div class="card-theme-header">
+                <div>
+                    <h5 class="card-theme-title">
+                        <i class="fa-solid fa-cart-plus" style="color:var(--accent-coral);"></i> Billing Counter Cart
+                    </h5>
+                    <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">Select products, adjust quantities, and build customer bill</p>
+                </div>
+                <span class="pill-badge pill-coral">Interactive Checkout</span>
+            </div>
+
+            <!-- Product Selection Bar -->
+            <div class="p-3 rounded-4 mb-4" style="background:#faf9f6;border:1px solid var(--border-soft);">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-7">
+                        <label class="form-label mb-1">Select Product from Stock</label>
+                        <select id="productSelect" class="form-select">
+                            <option value="">-- Choose Product --</option>
+                            @foreach (var p in availableProducts)
+                            {
+                                <option value="@p.ProductId" data-name="@p.Name" data-price="@p.Price" data-stock="@p.StockQuantity">
+                                    @p.Name — &#8377;@p.Price.ToString("N2") (@p.StockQuantity in stock)
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Qty</label>
+                        <input id="productQty" type="number" min="1" value="1" class="form-control" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" id="btnAddItem" class="btn-coral w-100 justify-content-center">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Items Table -->
+            <div class="table-responsive mb-3">
+                <table class="table-custom" id="cartTable">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Unit Price</th>
+                            <th style="width:140px;">Quantity</th>
+                            <th>Subtotal</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartTableBody">
+                        <tr id="emptyCartRow">
+                            <td colspan="5" class="text-center py-4 style-muted">
+                                <div style="font-size:13px;color:var(--text-subtle);">
+                                    <i class="fa-solid fa-cart-shopping me-1"></i> Cart is empty. Select a product above to start billing.
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Total Bar -->
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color:var(--border-soft) !important;">
+                <span style="font-size:14px;font-weight:700;color:var(--text-subtle);">Items Total:</span>
+                <span style="font-size:24px;font-weight:800;color:var(--accent-coral);" id="grandTotalDisplay">&#8377;0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Sale Metadata & Checkout -->
+    <div class="col-lg-4">
+        <div class="card-theme">
+            <h5 class="card-theme-title mb-3">
+                <i class="fa-solid fa-receipt" style="color:var(--accent-coral);"></i> Transaction Details
+            </h5>
+
+            <form asp-action="Create" method="post" id="checkoutForm">
+                <!-- Hidden Container for Array Form Fields -->
+                <div id="hiddenFieldsContainer"></div>
+
+                <!-- Staff Selection -->
+                <div class="mb-3">
+                    <label class="form-label">Served By (Staff) <span class="text-danger">*</span></label>
+                    <select name="userId" class="form-select" asp-items="ViewBag.Users" required>
+                        <option value="">-- Select Staff Member --</option>
+                    </select>
+                </div>
+
+                <!-- Customer Selection -->
+                <div class="mb-3">
+                    <label class="form-label">Customer (Optional)</label>
+                    <select name="customerId" class="form-select" asp-items="ViewBag.Customers">
+                        <option value="0">-- Walk-in Customer --</option>
+                    </select>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="mb-4">
+                    <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                    <select name="paymentMethod" class="form-select" asp-items="ViewBag.PaymentMethods" required>
+                    </select>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn-coral w-100 justify-content-center py-3" style="font-size:15px;" id="btnCheckout">
+                    <i class="fa-solid fa-check me-1"></i> Complete &amp; Save Sale
+                </button>
+                <a asp-action="Index" class="btn-light-pill w-100 justify-content-center mt-2">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let cart = [];
+
+    // 1. Add Product to Cart
+    $('#btnAddItem').click(function () {
+        const select = $('#productSelect option:selected');
+        const pId = parseInt(select.val());
+        if (!pId) {
+            alert('Please select a valid product.');
+            return;
+        }
+
+        const name = select.data('name');
+        const price = parseFloat(select.data('price'));
+        const stock = parseInt(select.data('stock'));
+        const qty = parseInt($('#productQty').val()) || 1;
+
+        if (qty > stock) {
+            alert('Cannot add more than available stock (' + stock + ').');
+            return;
+        }
+
+        // Check if item already exists in cart
+        const existingIndex = cart.findIndex(item => item.id === pId);
+        if (existingIndex > -1) {
+            const newQty = cart[existingIndex].qty + qty;
+            if (newQty > stock) {
+                alert('Cannot exceed available stock (' + stock + ').');
+                return;
+            }
+            cart[existingIndex].qty = newQty;
+        } else {
+            cart.push({ id: pId, name: name, price: price, qty: qty, stock: stock });
+        }
+
+        updateCartUI();
+    });
+
+    // 2. Adjust Quantity (+ or -)
+    function changeQty(pId, delta) {
+        const item = cart.find(i => i.id === pId);
+        if (item) {
+            item.qty += delta;
+            if (item.qty <= 0) {
+                removeItem(pId);
+            } else if (item.qty > item.stock) {
+                alert('Maximum available stock is ' + item.stock);
+                item.qty = item.stock;
+                updateCartUI();
+            } else {
+                updateCartUI();
+            }
+        }
+    }
+
+    // 3. Remove Item Completely
+    function removeItem(pId) {
+        cart = cart.filter(i => i.id !== pId);
+        updateCartUI();
+    }
+
+    // 4. Update Cart Table & Grand Total
+    function updateCartUI() {
+        const tbody = $('#cartTableBody');
+        tbody.empty();
+
+        if (cart.length === 0) {
+            tbody.html(`
+                <tr id="emptyCartRow">
+                    <td colspan="5" class="text-center py-4">
+                        <div style="font-size:13px;color:var(--text-subtle);">
+                            <i class="fa-solid fa-cart-shopping me-1"></i> Cart is empty. Select a product above to start billing.
+                        </div>
+                    </td>
+                </tr>
+            `);
+            $('#grandTotalDisplay').text('₹0.00');
+            return;
+        }
+
+        let total = 0;
+        cart.forEach(item => {
+            const subtotal = item.qty * item.price;
+            total += subtotal;
+
+            const row = `
+                <tr>
+                    <td><span style="font-weight:700;color:var(--text-title);">${item.name}</span></td>
+                    <td>&#8377;${item.price.toFixed(2)}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-sm btn-light-pill px-2 py-0" onclick="changeQty(${item.id}, -1)">-</button>
+                            <span class="pill-badge pill-dark px-3">${item.qty}</span>
+                            <button type="button" class="btn btn-sm btn-light-pill px-2 py-0" onclick="changeQty(${item.id}, 1)">+</button>
+                        </div>
+                    </td>
+                    <td><span style="font-weight:700;">&#8377;${subtotal.toFixed(2)}</span></td>
+                    <td class="text-end">
+                        <button type="button" class="btn-light-pill text-danger px-2 py-1" onclick="removeItem(${item.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+
+        $('#grandTotalDisplay').text('₹' + total.toFixed(2));
+    }
+
+    // 5. Submit Cart to Form
+    $('#checkoutForm').submit(function (e) {
+        if (cart.length === 0) {
+            e.preventDefault();
+            alert('Please add at least one product to the cart before checking out.');
+            return false;
+        }
+
+        const container = $('#hiddenFieldsContainer');
+        container.empty();
+
+        cart.forEach(item => {
+            container.append(`<input type="hidden" name="productIds" value="${item.id}" />`);
+            container.append(`<input type="hidden" name="quantities" value="${item.qty}" />`);
+            container.append(`<input type="hidden" name="unitPrices" value="${item.price}" />`);
+        });
+
+        return true;
+    });
+</script>
+}

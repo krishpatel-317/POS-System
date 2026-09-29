@@ -1,0 +1,59 @@
+@model POSSystem.Models.Product
+@{
+    ViewData["Title"] = "Add Product";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="card-theme">
+            <div class="card-theme-header">
+                <div>
+                    <h5 class="card-theme-title">
+                        <i class="fa-solid fa-box-archive" style="color:var(--accent-coral);"></i> Add New Product
+                    </h5>
+                    <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">Create an item in your inventory catalog</p>
+                </div>
+                <span class="pill-badge pill-coral">Inventory</span>
+            </div>
+
+            <form asp-action="Create" method="post">
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" placeholder="e.g. Uncle Chips, Coca Cola" autofocus />
+                    <span asp-validation-for="Name" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label asp-for="Price" class="form-label">Price (&#8377;) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background:#faf9f6;border-color:var(--border-soft);font-weight:700;">&#8377;</span>
+                            <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" />
+                        </div>
+                        <span asp-validation-for="Price" class="text-danger" style="font-size:12px;"></span>
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="StockQuantity" class="form-label">Stock Quantity <span class="text-danger">*</span></label>
+                        <input asp-for="StockQuantity" type="number" min="0" class="form-control" placeholder="0" />
+                        <span asp-validation-for="StockQuantity" class="text-danger" style="font-size:12px;"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="CategoryId" class="form-label">Category <span class="text-danger">*</span></label>
+                    <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select">
+                        <option value="">-- Select Category --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn-coral flex-grow-1 justify-content-center">
+                        <i class="fa-solid fa-check"></i> Save Product
+                    </button>
+                    <a asp-action="Index" class="btn-light-pill">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

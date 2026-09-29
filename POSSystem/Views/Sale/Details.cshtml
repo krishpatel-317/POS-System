@@ -1,0 +1,99 @@
+@model POSSystem.Models.Sale
+@{ 
+    ViewData["Title"] = $"Sale #{Model.SaleId} Details"; 
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card-theme">
+            <div class="card-theme-header">
+                <div>
+                    <h5 class="card-theme-title">
+                        <i class="fa-solid fa-receipt" style="color:var(--accent-coral);"></i> Receipt #@Model.SaleId
+                    </h5>
+                    <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">
+                        Recorded on @Model.SaleDate.ToString("dd MMMM yyyy, hh:mm tt")
+                    </p>
+                </div>
+                <span class="pill-badge pill-coral">Completed</span>
+            </div>
+
+            <!-- Summary Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="p-3 rounded-4" style="background:#faf9f6;border:1px solid var(--border-soft);">
+                        <div style="font-size:11px;color:var(--text-subtle);font-weight:700;text-transform:uppercase;">Customer</div>
+                        <div style="font-weight:700;font-size:15px;color:var(--text-title);margin-top:2px;">
+                            @(Model.Customer?.Name ?? "Walk-in Customer")
+                        </div>
+                        <small style="color:var(--text-subtle);font-size:12px;">@(Model.Customer?.Phone ?? "No contact")</small>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 rounded-4" style="background:#faf9f6;border:1px solid var(--border-soft);">
+                        <div style="font-size:11px;color:var(--text-subtle);font-weight:700;text-transform:uppercase;">Cashier</div>
+                        <div style="font-weight:700;font-size:15px;color:var(--text-title);margin-top:2px;">
+                            @(Model.User?.Name ?? "System")
+                        </div>
+                        <small style="color:var(--text-subtle);font-size:12px;">Staff User</small>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 rounded-4" style="background:#faf9f6;border:1px solid var(--border-soft);">
+                        <div style="font-size:11px;color:var(--text-subtle);font-weight:700;text-transform:uppercase;">Payment</div>
+                        <div style="font-weight:700;font-size:15px;color:var(--accent-coral);margin-top:2px;">
+                            @(Model.Payment?.PaymentMethod ?? "Cash")
+                        </div>
+                        <small style="color:var(--text-subtle);font-size:12px;">Paid: &#8377;@Model.TotalAmount.ToString("N2")</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Table (if any) -->
+            <h6 style="font-weight:800;color:var(--text-title);margin-bottom:12px;">Items in this Sale</h6>
+            @if (Model.SaleItems == null || !Model.SaleItems.Any())
+            {
+                <div class="p-3 rounded-4 text-center mb-4" style="background:#faf9f6;border:1px solid var(--border-soft);color:var(--text-subtle);font-size:13px;">
+                    This sale was recorded as a direct counter transaction without individual line items.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive mb-4">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Qty</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.SaleItems)
+                            {
+                                <tr>
+                                    <td>@item.Product?.Name</td>
+                                    <td>&#8377;@item.UnitPrice.ToString("N2")</td>
+                                    <td><span class="pill-badge pill-gray">@item.Quantity</span></td>
+                                    <td class="text-end" style="font-weight:700;">&#8377;@item.TotalPrice.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color:var(--border-soft) !important;">
+                <a asp-action="Index" class="btn-light-pill">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Sales
+                </a>
+                <div style="font-size:18px;font-weight:800;color:var(--text-title);">
+                    Grand Total: <span style="color:var(--accent-coral);">&#8377;@Model.TotalAmount.ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

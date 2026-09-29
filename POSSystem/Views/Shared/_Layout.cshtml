@@ -1,47 +1,572 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - POSSystem</title>
-    <script type="importmap"></script>
+    <title>@ViewData["Title"] - POS Dashboard</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans (Matches reference design) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 & FontAwesome -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/POSSystem.styles.css" asp-append-version="true" />
+
+    <style>
+        :root {
+            --bg-page:        #f4f3ef;       /* Soft warm stone background */
+            --surface-card:   #ffffff;       /* Pure white card surface */
+            --accent-coral:   #eb573d;       /* Warm terracotta/coral from design */
+            --accent-hover:   #d8472d;
+            --accent-soft:    #fef1ee;       /* Soft coral tint for tags */
+            --dark-charcoal:  #141416;       /* Deep charcoal / near black */
+            --dark-hover:     #242428;
+            --pill-gray:      #ece9e2;       /* Light warm gray for pill buttons */
+            --text-title:     #141416;       /* Strong black for headlines */
+            --text-body:      #3f3f46;
+            --text-subtle:    #82828a;       /* Soft muted gray */
+            --border-soft:    #eae7e0;       /* Very gentle card border */
+            --sidebar-width:  250px;
+            --topbar-height:  72px;
+            --radius-card:    24px;          /* Extra smooth rounded cards */
+            --radius-pill:    9999px;        /* Full pill roundness */
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text-body);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #ffffff;
+            border-right: 1px solid var(--border-soft);
+            display: flex;
+            flex-direction: column;
+            z-index: 1040;
+            padding: 20px 16px;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 8px 24px;
+            border-bottom: 1px solid var(--border-soft);
+            text-decoration: none;
+        }
+
+        .brand-badge {
+            width: 44px;
+            height: 44px;
+            background: var(--dark-charcoal);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 17px;
+            letter-spacing: -0.5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .brand-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-title);
+            line-height: 1.2;
+            letter-spacing: -0.3px;
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-subtle);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 0;
+        }
+
+        .menu-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-subtle);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 12px 14px 6px;
+        }
+
+        .nav-pill-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 16px;
+            color: #52525b;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: var(--radius-pill);
+            text-decoration: none;
+            transition: all 0.18s ease-in-out;
+            margin-bottom: 4px;
+        }
+
+        .nav-pill-link i {
+            width: 18px;
+            text-align: center;
+            font-size: 15px;
+            color: #a1a1aa;
+            transition: color 0.18s ease-in-out;
+        }
+
+        .nav-pill-link:hover {
+            background: var(--pill-gray);
+            color: var(--text-title);
+        }
+
+        .nav-pill-link:hover i {
+            color: var(--dark-charcoal);
+        }
+
+        .nav-pill-link.active {
+            background: var(--dark-charcoal);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(20, 20, 22, 0.18);
+        }
+
+        .nav-pill-link.active i {
+            color: var(--accent-coral);
+        }
+
+        /* ── Top Bar ── */
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--topbar-height);
+            background: var(--bg-page);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 36px;
+            z-index: 1030;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .search-pill-box {
+            position: relative;
+            width: 320px;
+        }
+
+        .search-pill-box input {
+            width: 100%;
+            height: 42px;
+            background: #ffffff;
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-pill);
+            padding: 0 18px 0 42px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-title);
+            outline: none;
+            transition: border 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .search-pill-box input:focus {
+            border-color: var(--accent-coral);
+            box-shadow: 0 0 0 3px rgba(235, 87, 61, 0.12);
+        }
+
+        .search-pill-box i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-subtle);
+            font-size: 14px;
+        }
+
+        .user-profile-pill {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #ffffff;
+            padding: 6px 14px 6px 8px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border-soft);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent-coral);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-title);
+            line-height: 1.1;
+        }
+
+        .user-role-tag {
+            font-size: 11px;
+            color: var(--text-subtle);
+            font-weight: 500;
+        }
+
+        /* ── Main Canvas ── */
+        #main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--topbar-height);
+            padding: 16px 36px 60px;
+            min-height: calc(100vh - var(--topbar-height));
+        }
+
+        /* ── Themed Card Styling (Matches Reference) ── */
+        .card-theme {
+            background: var(--surface-card);
+            border-radius: var(--radius-card);
+            border: 1px solid var(--border-soft);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.025);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card-theme-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-theme-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-title);
+            letter-spacing: -0.3px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── Pill Buttons ── */
+        .btn-coral {
+            background-color: var(--accent-coral);
+            color: #ffffff !important;
+            border: none;
+            border-radius: var(--radius-pill);
+            padding: 10px 22px;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.18s ease;
+            box-shadow: 0 4px 14px rgba(235, 87, 61, 0.25);
+            text-decoration: none;
+        }
+
+        .btn-coral:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(235, 87, 61, 0.32);
+        }
+
+        .btn-dark-pill {
+            background-color: var(--dark-charcoal);
+            color: #ffffff !important;
+            border: none;
+            border-radius: var(--radius-pill);
+            padding: 10px 22px;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.18s ease;
+            text-decoration: none;
+        }
+
+        .btn-dark-pill:hover {
+            background-color: var(--dark-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-light-pill {
+            background-color: var(--pill-gray);
+            color: var(--text-title) !important;
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-pill);
+            padding: 9px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .btn-light-pill:hover {
+            background-color: #e2ded5;
+        }
+
+        /* ── Tables ── */
+        .table-custom {
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0 6px;
+        }
+
+        .table-custom thead th {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-subtle);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border: none;
+            padding: 10px 16px;
+        }
+
+        .table-custom tbody tr {
+            background: #ffffff;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .table-custom tbody tr:hover {
+            background: #faf9f6;
+        }
+
+        .table-custom tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-title);
+            border-top: 1px solid var(--border-soft);
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .table-custom tbody td:first-child {
+            border-left: 1px solid var(--border-soft);
+            border-top-left-radius: 14px;
+            border-bottom-left-radius: 14px;
+        }
+
+        .table-custom tbody td:last-child {
+            border-right: 1px solid var(--border-soft);
+            border-top-right-radius: 14px;
+            border-bottom-right-radius: 14px;
+        }
+
+        /* ── Pill Badges ── */
+        .pill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .pill-coral {
+            background: var(--accent-soft);
+            color: var(--accent-coral);
+        }
+
+        .pill-dark {
+            background: var(--dark-charcoal);
+            color: #ffffff;
+        }
+
+        .pill-gray {
+            background: var(--pill-gray);
+            color: #52525b;
+        }
+
+        .pill-green {
+            background: #eafaf1;
+            color: #1e824c;
+        }
+
+        .pill-yellow {
+            background: #fff8e6;
+            color: #d97706;
+        }
+
+        /* ── Forms ── */
+        .form-control, .form-select {
+            border-radius: 14px;
+            border: 1px solid var(--border-soft);
+            padding: 11px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-title);
+            background-color: #faf9f6;
+            transition: all 0.15s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: #ffffff;
+            border-color: var(--accent-coral);
+            box-shadow: 0 0 0 3px rgba(235, 87, 61, 0.12);
+        }
+
+        .form-label {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text-title);
+            margin-bottom: 6px;
+        }
+
+        /* Alerts */
+        .alert-theme {
+            border-radius: 16px;
+            border: 1px solid var(--border-soft);
+            padding: 14px 20px;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-theme-success {
+            background: #f0fdf4;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+        .alert-theme-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">POSSystem</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
+
+    <!-- ══ Sleek Modern Sidebar ══ -->
+    <div id="sidebar">
+        <a class="brand-container" asp-controller="Home" asp-action="Index">
+            <div class="brand-badge">Nº</div>
+            <div>
+                <div class="brand-title">Financial POS</div>
+                <div class="brand-subtitle">Retail Management</div>
+            </div>
+        </a>
+
+        <nav class="sidebar-menu">
+            <div class="menu-label">Main</div>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")"
+               asp-controller="Home" asp-action="Index">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </a>
+
+            <div class="menu-label">Inventory</div>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Category" ? "active" : "")"
+               asp-controller="Category" asp-action="Index">
+                <i class="fa-solid fa-tags"></i> Categories
+            </a>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Product" ? "active" : "")"
+               asp-controller="Product" asp-action="Index">
+                <i class="fa-solid fa-box-archive"></i> Products
+            </a>
+
+            <div class="menu-label">Transactions</div>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+               asp-controller="Sale" asp-action="Index">
+                <i class="fa-solid fa-receipt"></i> Sales History
+            </a>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
+               asp-controller="Sale" asp-action="Create">
+                <i class="fa-solid fa-cart-plus"></i> New Sale
+            </a>
+
+            <div class="menu-label">Administration</div>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Customer" ? "active" : "")"
+               asp-controller="Customer" asp-action="Index">
+                <i class="fa-solid fa-users"></i> Customers
+            </a>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "User" ? "active" : "")"
+               asp-controller="User" asp-action="Index">
+                <i class="fa-solid fa-user-shield"></i> Staff & Users
+            </a>
+        </nav>
+    </div>
+
+    <!-- ══ Floating Top Bar ══ -->
+    <div id="topbar">
+        <div class="search-pill-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Start searching here..." />
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <div class="user-profile-pill">
+                <div class="user-avatar">KP</div>
+                <div>
+                    <div class="user-name">Krish Patel</div>
+                    <div class="user-role-tag">Store Administrator</div>
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+        </div>
+    </div>
+
+    <!-- ══ Main Content ══ -->
+    <div id="main-content">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert-theme alert-theme-success mb-4">
+                <i class="fa-solid fa-circle-check"></i>
+                <div>@TempData["Success"]</div>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert-theme alert-theme-error mb-4">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <div>@TempData["Error"]</div>
+            </div>
+        }
+
+        <main role="main">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - POSSystem - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

@@ -1,0 +1,47 @@
+@model POSSystem.Models.Customer
+@{ 
+    ViewData["Title"] = "Add Customer"; 
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-5 col-md-7">
+        <div class="card-theme">
+            <div class="card-theme-header">
+                <div>
+                    <h5 class="card-theme-title">
+                        <i class="fa-solid fa-user-plus" style="color:var(--accent-coral);"></i> Add Customer
+                    </h5>
+                    <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">Register customer for transaction history</p>
+                </div>
+                <span class="pill-badge pill-coral">People</span>
+            </div>
+
+            <form asp-action="Create" method="post">
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" placeholder="e.g. Rahul Sharma" autofocus />
+                    <span asp-validation-for="Name" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                    <input asp-for="Phone" class="form-control" placeholder="e.g. +91 98765 43210" />
+                    <span asp-validation-for="Phone" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                    <input asp-for="Email" class="form-control" type="email" placeholder="e.g. rahul@example.com" />
+                    <span asp-validation-for="Email" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn-coral flex-grow-1 justify-content-center">
+                        <i class="fa-solid fa-check"></i> Save Customer
+                    </button>
+                    <a asp-action="Index" class="btn-light-pill">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

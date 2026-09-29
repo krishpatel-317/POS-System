@@ -12,6 +12,7 @@ namespace POSSystem.Models
 
         // One Role -> Many Users
         public ICollection<User> Users { get; set; }
+
             = new List<User>();
     }
 }

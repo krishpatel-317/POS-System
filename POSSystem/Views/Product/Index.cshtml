@@ -1,0 +1,139 @@
+@model IEnumerable<POSSystem.Models.Product>
+@{
+    ViewData["Title"] = "Products";
+    var categories = ViewBag.Categories as IEnumerable<POSSystem.Models.Category> ?? Enumerable.Empty<POSSystem.Models.Category>();
+}
+
+<!-- Page Header & Action -->
+<div class="card-theme">
+    <div class="card-theme-header">
+        <div>
+            <h4 class="card-theme-title">
+                <i class="fa-solid fa-box-archive" style="color:var(--accent-coral);"></i> Products
+            </h4>
+            <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">Manage your inventory and stock status</p>
+        </div>
+        <a asp-action="Create" class="btn-coral">
+            <i class="fa-solid fa-plus"></i> Add Product
+        </a>
+    </div>
+
+    <!-- Filter Bar (Fintech Pill Style) -->
+    <form method="get" asp-action="Index" class="row g-2 align-items-center mb-4">
+        <div class="col-md-5">
+            <div style="position:relative;">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-subtle);font-size:13px;"></i>
+                <input type="text" name="search" value="@ViewBag.Search"
+                       class="form-control" style="border-radius:var(--radius-pill);padding-left:42px;" placeholder="Search product name..." />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select name="categoryId" class="form-select" style="border-radius:var(--radius-pill);">
+                <option value="0">All Categories</option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.CategoryId"
+                            selected="@(ViewBag.CategoryId?.ToString() == cat.CategoryId.ToString())">
+                        @cat.Name
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn-dark-pill flex-grow-1 justify-content-center">
+                <i class="fa-solid fa-filter"></i> Filter
+            </button>
+            <a asp-action="Index" class="btn-light-pill" title="Reset filter">
+                <i class="fa-solid fa-rotate-left"></i>
+            </a>
+        </div>
+    </form>
+
+    <!-- Summary Badges -->
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <span class="pill-badge pill-gray" style="padding:7px 16px;font-size:13px;">
+            <i class="fa-solid fa-boxes-stacked me-1"></i> @Model.Count() Products
+        </span>
+        <span class="pill-badge pill-coral" style="padding:7px 16px;font-size:13px;">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i> @Model.Count(p => p.StockQuantity <= 5) Low Stock
+        </span>
+        <span class="pill-badge pill-green" style="padding:7px 16px;font-size:13px;">
+            <i class="fa-solid fa-circle-check me-1"></i> @Model.Count(p => p.StockQuantity > 5) In Stock
+        </span>
+    </div>
+
+    <!-- Product Table -->
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <div style="width:54px;height:54px;background:var(--pill-gray);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--text-subtle);">
+                <i class="fa-solid fa-box-open fa-lg"></i>
+            </div>
+            <div style="font-weight:700;font-size:14px;color:var(--text-title);">No products found</div>
+            <p style="font-size:13px;color:var(--text-subtle);margin-top:2px;">Try adjusting your filters or click "Add Product".</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int i = 1; }
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td><span class="pill-badge pill-gray">@i</span></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width:34px;height:34px;border-radius:10px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-coral);font-size:14px;">
+                                        <i class="fa-solid fa-cube"></i>
+                                    </div>
+                                    <span style="font-weight:700;color:var(--text-title);">@p.Name</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="pill-badge pill-gray">@(p.Category?.Name ?? "None")</span>
+                            </td>
+                            <td>
+                                <span style="font-weight:800;color:var(--text-title);">&#8377;@p.Price.ToString("N2")</span>
+                            </td>
+                            <td>
+                                @if (p.StockQuantity == 0)
+                                {
+                                    <span class="pill-badge pill-coral"><i class="fa-solid fa-circle-xmark"></i> Out of stock</span>
+                                }
+                                else if (p.StockQuantity <= 5)
+                                {
+                                    <span class="pill-badge pill-yellow"><i class="fa-solid fa-triangle-exclamation"></i> @p.StockQuantity left</span>
+                                }
+                                else
+                                {
+                                    <span class="pill-badge pill-green"><i class="fa-solid fa-circle-check"></i> @p.StockQuantity in stock</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Edit" asp-route-id="@p.ProductId" class="btn-light-pill me-1">
+                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@p.ProductId" class="btn-light-pill text-danger">
+                                    <i class="fa-solid fa-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
+                        i++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
