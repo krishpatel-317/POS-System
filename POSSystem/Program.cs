@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
 using POSSystem.Models;
@@ -14,12 +15,35 @@ namespace POSSystem
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // 2. Add MVC Controllers and Views
+            // 2. Add ASP.NET Core Identity (default Microsoft Identity - no external providers)
+            builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+            {
+                // Simple password rules (easy to demo)
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredLength = 4;
+
+                // No email confirmation needed
+                options.SignIn.RequireConfirmedAccount = false;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>();
+
+            // Set the login page path to our custom Account/Login view
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Account/Login";
+                options.LogoutPath = "/Account/Logout";
+                options.AccessDeniedPath = "/Account/Login";
+            });
+
+            // 3. Add MVC Controllers and Views
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
 
-            // 3. Automatically ensure database tables exist and seed default enum roles
+            // 4. Automatically ensure database tables exist and seed default POS roles
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
@@ -28,12 +52,12 @@ namespace POSSystem
                     var context = services.GetRequiredService<ApplicationDbContext>();
                     context.Database.Migrate();
 
-                    // Seed default roles from UserRole Enum if none exist
-                    if (!context.Roles.Any())
+                    // Seed default POS roles from UserRole Enum if none exist
+                    if (!context.POSRoles.Any())
                     {
                         foreach (var roleName in Enum.GetNames<UserRole>())
                         {
-                            context.Roles.Add(new Role { Name = roleName });
+                            context.POSRoles.Add(new Role { Name = roleName });
                         }
                         context.SaveChanges();
                     }
@@ -45,7 +69,7 @@ namespace POSSystem
                 }
             }
 
-            // 4. Configure the HTTP request pipeline.
+            // 5. Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
@@ -55,6 +79,8 @@ namespace POSSystem
             app.UseHttpsRedirection();
             app.UseRouting();
 
+            // Authentication must come BEFORE Authorization
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapStaticAssets();
@@ -62,6 +88,9 @@ namespace POSSystem
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}")
                 .WithStaticAssets();
+
+            // Required for Identity Razor Pages (Login, Register, Logout)
+            app.MapRazorPages();
 
             app.Run();
         }

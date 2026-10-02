@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using POSSystem.Models;
 
 namespace POSSystem.Controllers
 {
+    [Authorize]
     public class RoleController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -18,7 +20,7 @@ namespace POSSystem.Controllers
         // 1. READ: List all roles
         public IActionResult Index()
         {
-            var roles = _context.Roles.ToList();
+            var roles = _context.POSRoles.ToList();
             return View(roles);
         }
 
@@ -39,14 +41,14 @@ namespace POSSystem.Controllers
             if (ModelState.IsValid)
             {
                 // Check if role name already exists in database
-                if (_context.Roles.Any(r => r.Name == role.Name))
+                if (_context.POSRoles.Any(r => r.Name == role.Name))
                 {
                     TempData["Error"] = $"Role \"{role.Name}\" already exists!";
                     ViewBag.EnumRoles = new SelectList(Enum.GetNames<UserRole>(), role.Name);
                     return View(role);
                 }
 
-                _context.Roles.Add(role);
+                _context.POSRoles.Add(role);
                 _context.SaveChanges();
                 TempData["Success"] = $"Role \"{role.Name}\" added successfully!";
                 return RedirectToAction("Index");
@@ -59,7 +61,7 @@ namespace POSSystem.Controllers
         // 4. EDIT (GET)
         public IActionResult Edit(int id)
         {
-            var role = _context.Roles.Find(id);
+            var role = _context.POSRoles.Find(id);
             if (role == null) return NotFound();
 
             ViewBag.EnumRoles = new SelectList(Enum.GetNames<UserRole>(), role.Name);
@@ -74,7 +76,7 @@ namespace POSSystem.Controllers
 
             if (ModelState.IsValid)
             {
-                _context.Roles.Update(role);
+                _context.POSRoles.Update(role);
                 _context.SaveChanges();
                 TempData["Success"] = "Role updated successfully!";
                 return RedirectToAction("Index");
@@ -87,7 +89,7 @@ namespace POSSystem.Controllers
         // 6. DELETE (GET)
         public IActionResult Delete(int id)
         {
-            var role = _context.Roles.Find(id);
+            var role = _context.POSRoles.Find(id);
             if (role == null) return NotFound();
             return View(role);
         }
@@ -96,7 +98,7 @@ namespace POSSystem.Controllers
         [HttpPost, ActionName("Delete")]
         public IActionResult DeleteConfirmed(int id)
         {
-            var role = _context.Roles.Include(r => r.Users).FirstOrDefault(r => r.RoleId == id);
+            var role = _context.POSRoles.Include(r => r.Users).FirstOrDefault(r => r.RoleId == id);
 
             if (role != null && role.Users.Count > 0)
             {
@@ -106,7 +108,7 @@ namespace POSSystem.Controllers
 
             if (role != null)
             {
-                _context.Roles.Remove(role);
+                _context.POSRoles.Remove(role);
                 _context.SaveChanges();
                 TempData["Success"] = "Role deleted successfully!";
             }
@@ -115,3 +117,4 @@ namespace POSSystem.Controllers
         }
     }
 }
+

@@ -1,0 +1,152 @@
+@model POSSystem.Models.RegisterViewModel
+@{
+    Layout = null; // Full-page register screen, no sidebar
+    ViewData["Title"] = "Register";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register – Financial POS</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <style>
+        :root {
+            --accent-coral: #eb573d;
+            --accent-hover: #d8472d;
+            --bg-page: #f4f3ef;
+            --border-soft: #eae7e0;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg-page);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+        .register-card {
+            background: #fff;
+            border-radius: 28px;
+            border: 1px solid var(--border-soft);
+            padding: 48px 44px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 8px 48px rgba(0,0,0,0.07);
+        }
+        .brand-dot {
+            width: 52px; height: 52px;
+            background: #141416;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 800; color: #fff;
+            margin-bottom: 24px;
+        }
+        h1 { font-size: 26px; font-weight: 800; color: #141416; margin-bottom: 6px; }
+        .subtitle { font-size: 14px; color: #82828a; font-weight: 500; margin-bottom: 32px; }
+        .form-label { font-size: 13px; font-weight: 700; color: #141416; margin-bottom: 6px; }
+        .form-control {
+            border-radius: 14px;
+            border: 1px solid var(--border-soft);
+            padding: 12px 16px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #faf9f6;
+        }
+        .form-control:focus {
+            background: #fff;
+            border-color: var(--accent-coral);
+            box-shadow: 0 0 0 3px rgba(235,87,61,0.12);
+        }
+        .btn-register {
+            width: 100%;
+            background: var(--accent-coral);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            margin-top: 8px;
+            cursor: pointer;
+            transition: background 0.18s;
+        }
+        .btn-register:hover { background: var(--accent-hover); }
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #82828a;
+        }
+        .login-link a { color: var(--accent-coral); font-weight: 700; text-decoration: none; }
+        .text-danger { font-size: 12px; font-weight: 600; }
+        .alert-error {
+            background: #fef2f2; color: #991b1b;
+            border: 1px solid #fecaca;
+            border-radius: 12px; padding: 12px 16px;
+            font-size: 13px; font-weight: 600;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-card">
+        <div class="brand-dot">N°</div>
+        <h1>Create account</h1>
+        <p class="subtitle">Set up your POS system access</p>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div class="alert-error">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i>@error.ErrorMessage
+                </div>
+            }
+        }
+
+        <form asp-action="Register" method="post">
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label">Username</label>
+                <input asp-for="Username" class="form-control" placeholder="Choose a username" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Email Address</label>
+                <input asp-for="Email" class="form-control" type="email" placeholder="your@email.com" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Password</label>
+                <input asp-for="Password" class="form-control" type="password" placeholder="Minimum 4 characters" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="Re-enter password" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+            <button type="submit" class="btn-register">
+                <i class="fa-solid fa-user-plus me-2"></i>Create Account
+            </button>
+        </form>
+
+        <div class="login-link">
+            Already have an account? <a asp-action="Login">Sign in</a>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+</body>
+</html>

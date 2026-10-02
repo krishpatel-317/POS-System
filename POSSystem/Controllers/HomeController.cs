@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
@@ -6,6 +7,7 @@ using System.Diagnostics;
 
 namespace POSSystem.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -66,3 +68,4 @@ namespace POSSystem.Controllers
         }
     }
 }
+

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using POSSystem.Models;
 
 namespace POSSystem.Controllers
 {
+    [Authorize]
     public class SaleController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -53,7 +55,7 @@ namespace POSSystem.Controllers
             ViewBag.Customers = new SelectList(_context.Customers.OrderBy(c => c.Name).ToList(), "CustomerId", "Name");
             
             // Staff members with role names
-            var usersWithRoles = _context.Users
+            var usersWithRoles = _context.POSUsers
                 .Include(u => u.Role)
                 .OrderBy(u => u.Name)
                 .Select(u => new {
@@ -149,3 +151,5 @@ namespace POSSystem.Controllers
         }
     }
 }
+
+

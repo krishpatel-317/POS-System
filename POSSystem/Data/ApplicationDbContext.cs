@@ -1,10 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using POSSystem.Models;
 using System.Reflection.Emit;
 
 namespace POSSystem.Data
 {
-    public class ApplicationDbContext : DbContext
+    // IdentityDbContext adds all the ASP.NET Identity tables automatically
+    public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     {
         public ApplicationDbContext(
             DbContextOptions<ApplicationDbContext> options)
@@ -12,9 +15,10 @@ namespace POSSystem.Data
         {
         }
 
-        public DbSet<Role> Roles { get; set; }
+        // POS-specific tables (separate from Identity tables)
+        public DbSet<Role> POSRoles { get; set; }
 
-        public DbSet<User> Users { get; set; }
+        public DbSet<User> POSUsers { get; set; }
 
         public DbSet<Category> Categories { get; set; }
 
