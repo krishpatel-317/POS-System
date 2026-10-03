@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 // Individual products inside that bill
@@ -12,12 +12,12 @@ namespace POSSystem.Models
         [ForeignKey("Sale")]
         public int SaleId { get; set; }
 
-        public Sale Sale { get; set; }
+        public Sale? Sale { get; set; }
 
         [ForeignKey("Product")]
         public int ProductId { get; set; }
 
-        public Product Product { get; set; }
+        public Product? Product { get; set; }
 
         [Required]
         public int Quantity { get; set; }

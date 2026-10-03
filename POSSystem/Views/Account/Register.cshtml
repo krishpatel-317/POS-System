@@ -8,7 +8,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Register – Financial POS</title>
+    <title>Register – Smart Retail POS System</title>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon.png?v=3" />
+    <link rel="icon" type="image/png" sizes="16x16" href="~/images/favicon.png?v=3" />
+    <link rel="shortcut icon" href="~/favicon.ico?v=3" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -37,31 +41,23 @@
             background: #fff;
             border-radius: 28px;
             border: 1px solid var(--border-soft);
-            padding: 48px 44px;
+            padding: 44px 40px;
             width: 100%;
-            max-width: 440px;
+            max-width: 460px;
             box-shadow: 0 8px 48px rgba(0,0,0,0.07);
         }
-        .brand-dot {
-            width: 52px; height: 52px;
-            background: #141416;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px; font-weight: 800; color: #fff;
-            margin-bottom: 24px;
-        }
         h1 { font-size: 26px; font-weight: 800; color: #141416; margin-bottom: 6px; }
-        .subtitle { font-size: 14px; color: #82828a; font-weight: 500; margin-bottom: 32px; }
+        .subtitle { font-size: 14px; color: #82828a; font-weight: 500; margin-bottom: 28px; }
         .form-label { font-size: 13px; font-weight: 700; color: #141416; margin-bottom: 6px; }
-        .form-control {
+        .form-control, .form-select {
             border-radius: 14px;
             border: 1px solid var(--border-soft);
-            padding: 12px 16px;
+            padding: 11px 16px;
             font-size: 14px;
             font-family: inherit;
             background: #faf9f6;
         }
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             background: #fff;
             border-color: var(--accent-coral);
             box-shadow: 0 0 0 3px rgba(235,87,61,0.12);
@@ -72,11 +68,11 @@
             color: #fff;
             border: none;
             border-radius: 14px;
-            padding: 14px;
+            padding: 13px;
             font-size: 15px;
             font-weight: 700;
             font-family: inherit;
-            margin-top: 8px;
+            margin-top: 10px;
             cursor: pointer;
             transition: background 0.18s;
         }
@@ -100,9 +96,11 @@
 </head>
 <body>
     <div class="register-card">
-        <div class="brand-dot">N°</div>
-        <h1>Create account</h1>
-        <p class="subtitle">Set up your POS system access</p>
+        <div class="mb-3">
+            <img src="~/images/logo.png?v=3" width="60" height="60" alt="Smart Retail POS" style="object-fit:contain;" />
+        </div>
+        <h1>Create Account</h1>
+        <p class="subtitle">Set up user access for Smart Retail POS System</p>
 
         @if (!ViewData.ModelState.IsValid)
         {
@@ -116,27 +114,49 @@
 
         <form asp-action="Register" method="post">
             <div class="mb-3">
-                <label asp-for="Username" class="form-label">Username</label>
-                <input asp-for="Username" class="form-control" placeholder="Choose a username" />
-                <span asp-validation-for="Username" class="text-danger"></span>
+                <label asp-for="Name" class="form-label">Full Name</label>
+                <input asp-for="Name" class="form-control" placeholder="e.g. Ramesh Patel" autofocus />
+                <span asp-validation-for="Name" class="text-danger"></span>
             </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="Username" class="form-label">Username</label>
+                    <input asp-for="Username" class="form-control" placeholder="e.g. ramesh12" />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Role" class="form-label">Assign Role</label>
+                    <select asp-for="Role" class="form-select">
+                        <option value="Cashier">Cashier (Staff)</option>
+                        <option value="Manager">Store Manager</option>
+                        <option value="Admin">Store Owner (Admin)</option>
+                    </select>
+                    <span asp-validation-for="Role" class="text-danger"></span>
+                </div>
+            </div>
+
             <div class="mb-3">
                 <label asp-for="Email" class="form-label">Email Address</label>
-                <input asp-for="Email" class="form-control" type="email" placeholder="your@email.com" />
+                <input asp-for="Email" class="form-control" type="email" placeholder="ramesh@posstore.local" />
                 <span asp-validation-for="Email" class="text-danger"></span>
             </div>
-            <div class="mb-3">
-                <label asp-for="Password" class="form-label">Password</label>
-                <input asp-for="Password" class="form-control" type="password" placeholder="Minimum 4 characters" />
-                <span asp-validation-for="Password" class="text-danger"></span>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="Password" class="form-label">Password</label>
+                    <input asp-for="Password" class="form-control" type="password" placeholder="Min 4 chars" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ConfirmPassword" class="form-label">Confirm</label>
+                    <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="Repeat password" />
+                    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                </div>
             </div>
-            <div class="mb-3">
-                <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
-                <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="Re-enter password" />
-                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
-            </div>
+
             <button type="submit" class="btn-register">
-                <i class="fa-solid fa-user-plus me-2"></i>Create Account
+                <i class="fa-solid fa-user-check me-2"></i>Register &amp; Assign Role
             </button>
         </form>
 

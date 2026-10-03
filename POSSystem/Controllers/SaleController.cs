@@ -17,20 +17,129 @@ namespace POSSystem.Controllers
             _context = context;
         }
 
-        // 1. READ (List all sales)
-        public IActionResult Index()
+        // Helper: Ensure the logged-in Identity user exists in the POSUsers table for cashier tracking
+        private User GetOrCreateCurrentPOSUser()
         {
-            var sales = _context.Sales
+            string username = User.Identity?.Name ?? "User";
+            var posUser = _context.POSUsers.Include(u => u.Role)
+                .FirstOrDefault(u => u.Username == username || u.Name == username);
+
+            if (posUser == null)
+            {
+                // Ensure default Cashier role exists
+                var defaultRole = _context.POSRoles.FirstOrDefault(r => r.Name == "Cashier") 
+                                  ?? _context.POSRoles.FirstOrDefault();
+                
+                if (defaultRole == null)
+                {
+                    defaultRole = new Role { Name = "Cashier" };
+                    _context.POSRoles.Add(defaultRole);
+                    _context.SaveChanges();
+                }
+
+                posUser = new User
+                {
+                    Name = username,
+                    Username = username,
+                    Password = "IdentityManaged", // Auth handled by ASP.NET Core Identity
+                    RoleId = defaultRole.RoleId
+                };
+
+                _context.POSUsers.Add(posUser);
+                _context.SaveChanges();
+            }
+
+            return posUser;
+        }
+
+        // 1. READ & FILTER (Defaults to showing only the logged-in user's sales, with option to view all store sales)
+        public IActionResult Index(int? cashierId, string? paymentMethod, string? dateRange, string? search, bool showAllStoreSales = false)
+        {
+            var currentPosUser = GetOrCreateCurrentPOSUser();
+
+            // Strict Privilege Isolation: Cashiers can NEVER see other staff's sales
+            bool isPrivileged = User.IsInRole("Admin") || User.IsInRole("Manager");
+            if (!isPrivileged)
+            {
+                cashierId = currentPosUser.UserId;
+                showAllStoreSales = false;
+            }
+            else if (!showAllStoreSales && (!cashierId.HasValue || cashierId.Value == 0))
+            {
+                // Admins/Managers default to their own sales, but can toggle to all store sales
+                cashierId = currentPosUser.UserId;
+            }
+
+            IQueryable<Sale> query = _context.Sales
                 .Include(s => s.Customer)
                 .Include(s => s.User)
                 .Include(s => s.Payment)
-                .OrderByDescending(s => s.SaleDate)
-                .ToList();
+                .Include(s => s.SaleItems)
+                .AsQueryable();
+
+            // Filter by Cashier if specified (or default to current user)
+            if (cashierId.HasValue && cashierId.Value > 0)
+            {
+                query = query.Where(s => s.UserId == cashierId.Value);
+            }
+
+            // Filter by Payment Method
+            if (!string.IsNullOrEmpty(paymentMethod))
+            {
+                query = query.Where(s => s.Payment != null && s.Payment.PaymentMethod == paymentMethod);
+            }
+
+            // Filter by Date Range
+            DateTime today = DateTime.Today;
+            if (dateRange == "today")
+            {
+                query = query.Where(s => s.SaleDate >= today && s.SaleDate < today.AddDays(1));
+            }
+            else if (dateRange == "week")
+            {
+                DateTime startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                query = query.Where(s => s.SaleDate >= startOfWeek);
+            }
+            else if (dateRange == "month")
+            {
+                DateTime startOfMonth = new DateTime(today.Year, today.Month, 1);
+                query = query.Where(s => s.SaleDate >= startOfMonth);
+            }
+
+            // Search by Customer Name or Sale #
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+                query = query.Where(s => 
+                    (s.Customer != null && s.Customer.Name.Contains(search)) ||
+                    (s.User != null && s.User.Name.Contains(search)) ||
+                    s.SaleId.ToString().Contains(search));
+            }
+
+            var sales = query.OrderByDescending(s => s.SaleDate).ToList();
+
+            // Filter dropdown data
+            ViewBag.Cashiers = new SelectList(_context.POSUsers.OrderBy(u => u.Name).ToList(), "UserId", "Name", cashierId);
+            ViewBag.PaymentMethods = new SelectList(Enum.GetNames<PaymentMethodType>(), paymentMethod);
             
+            // Pass active filter state to view
+            ViewBag.SelectedCashier = cashierId;
+            ViewBag.SelectedPaymentMethod = paymentMethod;
+            ViewBag.SelectedDateRange = dateRange;
+            ViewBag.SearchTerm = search;
+            ViewBag.ShowAllStoreSales = showAllStoreSales;
+            ViewBag.CurrentPosUserId = currentPosUser.UserId;
+            ViewBag.CurrentUserName = currentPosUser.Name;
+
+            // Summary metrics for current filtered view
+            ViewBag.FilteredRevenue = sales.Sum(s => s.TotalAmount);
+            ViewBag.FilteredCount = sales.Count;
+            ViewBag.FilteredAvgTicket = sales.Count > 0 ? (sales.Sum(s => s.TotalAmount) / sales.Count) : 0;
+
             return View(sales);
         }
 
-        // 2. DETAILS (Show specific sale with receipt items)
+        // 2. DETAILS (Show specific sale with printable receipt)
         public IActionResult Details(int id)
         {
             var sale = _context.Sales
@@ -52,9 +161,11 @@ namespace POSSystem.Controllers
         // 3. CREATE (Show POS Cart Interface)
         public IActionResult Create()
         {
+            var currentPosUser = GetOrCreateCurrentPOSUser();
+
             ViewBag.Customers = new SelectList(_context.Customers.OrderBy(c => c.Name).ToList(), "CustomerId", "Name");
             
-            // Staff members with role names
+            // Staff members with role names, default selected to current logged-in user
             var usersWithRoles = _context.POSUsers
                 .Include(u => u.Role)
                 .OrderBy(u => u.Name)
@@ -64,7 +175,9 @@ namespace POSSystem.Controllers
                 })
                 .ToList();
 
-            ViewBag.Users = new SelectList(usersWithRoles, "UserId", "DisplayName");
+            ViewBag.Users = new SelectList(usersWithRoles, "UserId", "DisplayName", currentPosUser.UserId);
+            ViewBag.CurrentCashierId = currentPosUser.UserId;
+            ViewBag.CurrentCashierName = currentPosUser.Name;
 
             // Products available in stock
             ViewBag.AvailableProducts = _context.Products
@@ -80,13 +193,20 @@ namespace POSSystem.Controllers
 
         // 4. CREATE (Process Cart Checkout, Create Sale & Items, Update Stock)
         [HttpPost]
-        public IActionResult Create(int? customerId, int userId, string paymentMethod, List<int> productIds, List<int> quantities, List<decimal> unitPrices)
+        public IActionResult Create(int? customerId, int? userId, string paymentMethod, List<int> productIds, List<int> quantities, List<decimal> unitPrices)
         {
             // Ensure cart is not empty
             if (productIds == null || productIds.Count == 0)
             {
                 TempData["Error"] = "Please add at least one product to the cart before checking out.";
                 return RedirectToAction("Create");
+            }
+
+            // Fallback to current logged-in user if userId wasn't supplied
+            if (!userId.HasValue || userId.Value == 0)
+            {
+                var currentUser = GetOrCreateCurrentPOSUser();
+                userId = currentUser.UserId;
             }
 
             // Calculate total bill amount
@@ -102,7 +222,7 @@ namespace POSSystem.Controllers
                 SaleDate = DateTime.Now,
                 TotalAmount = grandTotal,
                 CustomerId = customerId == 0 ? null : customerId, // Walk-in support
-                UserId = userId
+                UserId = userId.Value
             };
 
             _context.Sales.Add(sale);
@@ -146,10 +266,8 @@ namespace POSSystem.Controllers
 
             _context.SaveChanges();
 
-            TempData["Success"] = $"Sale #{sale.SaleId} recorded with {productIds.Count} line item(s)! Inventory stock updated automatically.";
-            return RedirectToAction("Index");
+            TempData["Success"] = $"Sale #{sale.SaleId} recorded under your account! Billed ₹{grandTotal:N2}.";
+            return RedirectToAction("Details", new { id = sale.SaleId });
         }
     }
 }
-
-

@@ -1,0 +1,29 @@
+@{
+    ViewData["Title"] = "Access Restricted";
+}
+
+<div class="row justify-content-center py-5">
+    <div class="col-lg-6 col-md-8">
+        <div class="card-theme text-center p-5">
+            <div style="width:64px;height:64px;border-radius:50%;background:#fef2f2;color:#991b1b;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 20px;">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+
+            <h3 style="font-weight:800;color:var(--text-title);margin-bottom:8px;">
+                Access Restricted (Admin Only)
+            </h3>
+            <p style="color:var(--text-subtle);font-size:14px;line-height:1.5;max-width:400px;margin:0 auto 24px;">
+                You do not have administrative privileges to access this section of the POS system. Contact your store owner for elevated role permissions.
+            </p>
+
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-controller="Home" asp-action="Index" class="btn-dark-pill">
+                    <i class="fa-solid fa-chart-pie"></i> Return to Dashboard
+                </a>
+                <a asp-controller="Sale" asp-action="Create" class="btn-coral">
+                    <i class="fa-solid fa-cart-plus"></i> Open POS Counter
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

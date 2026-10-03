@@ -13,9 +13,12 @@
             </h4>
             <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">Manage your inventory and stock status</p>
         </div>
-        <a asp-action="Create" class="btn-coral">
-            <i class="fa-solid fa-plus"></i> Add Product
-        </a>
+        @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+        {
+            <a asp-action="Create" class="btn-coral">
+                <i class="fa-solid fa-plus"></i> Add Product
+            </a>
+        }
     </div>
 
     <!-- Filter Bar (Fintech Pill Style) -->
@@ -84,7 +87,10 @@
                         <th>Category</th>
                         <th>Price</th>
                         <th>Stock Status</th>
-                        <th class="text-end">Actions</th>
+                        @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                        {
+                            <th class="text-end">Actions</th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
@@ -121,14 +127,17 @@
                                     <span class="pill-badge pill-green"><i class="fa-solid fa-circle-check"></i> @p.StockQuantity in stock</span>
                                 }
                             </td>
-                            <td class="text-end">
-                                <a asp-action="Edit" asp-route-id="@p.ProductId" class="btn-light-pill me-1">
-                                    <i class="fa-solid fa-pen-to-square"></i> Edit
-                                </a>
-                                <a asp-action="Delete" asp-route-id="@p.ProductId" class="btn-light-pill text-danger">
-                                    <i class="fa-solid fa-trash"></i> Delete
-                                </a>
-                            </td>
+                            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                            {
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@p.ProductId" class="btn-light-pill me-1">
+                                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@p.ProductId" class="btn-light-pill text-danger">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </a>
+                                </td>
+                            }
                         </tr>
                         i++;
                     }

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 // One complete bill/transaction
@@ -24,7 +24,7 @@ namespace POSSystem.Models
         [ForeignKey("User")]
         public int UserId { get; set; }
 
-        public User User { get; set; }
+        public User? User { get; set; }
 
         // One Sale -> Many SaleItems
         public ICollection<SaleItem> SaleItems { get; set; }

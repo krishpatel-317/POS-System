@@ -17,25 +17,21 @@ namespace POSSystem.Controllers
             _context = context;
         }
 
-        // 1. READ (List all products, with simple search & filter)
+        // 1. READ (All staff can view products to check stock, price, and category)
         public async Task<IActionResult> Index(string search, int categoryId)
         {
-            // Start with a basic query that includes the Category data
             var query = _context.Products.Include(p => p.Category).AsQueryable();
 
-            // Apply search if the user typed something
             if (search != null)
             {
                 query = query.Where(p => p.Name.Contains(search));
             }
 
-            // Apply category filter if a category was selected
             if (categoryId > 0)
             {
                 query = query.Where(p => p.CategoryId == categoryId);
             }
 
-            // Send data back to the view so the dropdowns/textboxes keep their values
             ViewBag.Search = search;
             ViewBag.CategoryId = categoryId;
             ViewBag.Categories = await _context.Categories.ToListAsync();
@@ -44,19 +40,19 @@ namespace POSSystem.Controllers
             return View(products);
         }
 
-        // 2. CREATE (Show Form)
+        // 2. CREATE (PRIVILEGE: Only Admin and Manager can add new inventory items)
+        [Authorize(Roles = "Admin,Manager")]
         public IActionResult Create()
         {
-            // Send the list of categories to the view to create a dropdown list
             ViewBag.Categories = new SelectList(_context.Categories, "CategoryId", "Name");
             return View();
         }
 
         // 3. CREATE (Save to Database)
         [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Create(Product product)
         {
-            // Ignore these fields during validation since they aren't filled in by the form
             ModelState.Remove("Category");
             ModelState.Remove("SaleItems");
 
@@ -65,27 +61,28 @@ namespace POSSystem.Controllers
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
                 
-                TempData["Success"] = "Product added!";
+                TempData["Success"] = $"Product '{product.Name}' added to inventory!";
                 return RedirectToAction("Index");
             }
 
-            // If there's an error, recreate the dropdown list and show the form again
             ViewBag.Categories = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
             return View(product);
         }
 
-        // 4. EDIT (Show Form)
+        // 4. EDIT (PRIVILEGE: Only Admin and Manager can adjust prices or stock)
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Edit(int id)
         {
             var product = await _context.Products.FindAsync(id);
-            
-            // Recreate the dropdown, selecting the product's current category
+            if (product == null) return NotFound();
+
             ViewBag.Categories = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
             return View(product);
         }
 
         // 5. EDIT (Update in Database)
         [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Edit(Product product)
         {
             ModelState.Remove("Category");
@@ -96,7 +93,7 @@ namespace POSSystem.Controllers
                 _context.Products.Update(product);
                 await _context.SaveChangesAsync();
                 
-                TempData["Success"] = "Product updated!";
+                TempData["Success"] = $"Product '{product.Name}' updated!";
                 return RedirectToAction("Index");
             }
 
@@ -104,32 +101,39 @@ namespace POSSystem.Controllers
             return View(product);
         }
 
-        // 6. DELETE (Show Confirmation)
+        // 6. DELETE (PRIVILEGE: Only Admin and Manager can delete products)
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(p => p.ProductId == id);
+            if (product == null) return NotFound();
+
             return View(product);
         }
 
-        // 7. DELETE (Remove from Database)
+        // 7. DELETE (Remove from Database with SaleItem guard)
         [HttpPost, ActionName("Delete")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var product = await _context.Products.Include(p => p.SaleItems).FirstOrDefaultAsync(p => p.ProductId == id);
 
-            // Simple check: don't delete if it's already part of a sale
-            if (product.SaleItems.Count > 0)
+            if (product != null)
             {
-                TempData["Error"] = "Cannot delete this product because it is in a past sale.";
-                return RedirectToAction("Index");
+                // Delete Guard: Cannot delete product if it was sold in historical transactions
+                if (product.SaleItems != null && product.SaleItems.Count > 0)
+                {
+                    TempData["Error"] = $"Cannot delete product '{product.Name}' because it exists in past sales receipts. Archive or reduce stock to 0 instead.";
+                    return RedirectToAction("Index");
+                }
+
+                _context.Products.Remove(product);
+                await _context.SaveChangesAsync();
+                
+                TempData["Success"] = $"Product '{product.Name}' deleted from inventory.";
             }
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-            
-            TempData["Success"] = "Product deleted!";
             return RedirectToAction("Index");
         }
     }
 }
-

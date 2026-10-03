@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace POSSystem.Models
 {
-    // ViewModel for Login form (only what the user types on login page)
+    // ViewModel for Login form
     public class LoginViewModel
     {
         [Required(ErrorMessage = "Username is required")]
@@ -13,15 +13,21 @@ namespace POSSystem.Models
         public string Password { get; set; } = string.Empty;
     }
 
-    // ViewModel for Register form
+    // ViewModel for Register form (includes Role assignment)
     public class RegisterViewModel
     {
+        [Required(ErrorMessage = "Full name is required")]
+        public string Name { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Username is required")]
         public string Username { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Enter a valid email address")]
         public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Select an account role")]
+        public string Role { get; set; } = "Cashier";
 
         [Required(ErrorMessage = "Password is required")]
         [DataType(DataType.Password)]

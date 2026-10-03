@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 // Item being sold
@@ -22,7 +22,7 @@ namespace POSSystem.Models
         [ForeignKey("Category")]
         public int CategoryId { get; set; }
 
-        public Category Category { get; set; }
+        public Category? Category { get; set; }
 
         // One Product -> Many SaleItems
         public ICollection<SaleItem> SaleItems { get; set; }

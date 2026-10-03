@@ -6,7 +6,7 @@ using POSSystem.Models;
 
 namespace POSSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin,Manager")]
     public class CategoryController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -88,13 +88,13 @@ namespace POSSystem.Controllers
             var category = await _context.Categories.Include(c => c.Products).FirstOrDefaultAsync(c => c.CategoryId == id);
 
             // Simple check: don't delete if it has products
-            if (category.Products.Count > 0)
+            if (category != null && category.Products != null && category.Products.Count > 0)
             {
                 TempData["Error"] = "Cannot delete this category because it has products inside it.";
                 return RedirectToAction("Index");
             }
 
-            _context.Categories.Remove(category);
+            if (category != null) { _context.Categories.Remove(category); await _context.SaveChangesAsync(); }
             await _context.SaveChangesAsync();
             
             TempData["Success"] = "Category deleted!";
@@ -102,4 +102,6 @@ namespace POSSystem.Controllers
         }
     }
 }
+
+
 

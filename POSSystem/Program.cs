@@ -15,27 +15,28 @@ namespace POSSystem
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // 2. Add ASP.NET Core Identity (default Microsoft Identity - no external providers)
+            // 2. Add ASP.NET Core Identity with Role Support (Admin, Manager, Cashier)
             builder.Services.AddDefaultIdentity<IdentityUser>(options =>
             {
-                // Simple password rules (easy to demo)
+                // Simple password rules for easy lab demo
                 options.Password.RequireDigit = false;
                 options.Password.RequireLowercase = false;
                 options.Password.RequireUppercase = false;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequiredLength = 4;
 
-                // No email confirmation needed
+                // No email confirmation required
                 options.SignIn.RequireConfirmedAccount = false;
             })
+            .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
-            // Set the login page path to our custom Account/Login view
+            // Set the login and access denied paths
             builder.Services.ConfigureApplicationCookie(options =>
             {
                 options.LoginPath = "/Account/Login";
                 options.LogoutPath = "/Account/Logout";
-                options.AccessDeniedPath = "/Account/Login";
+                options.AccessDeniedPath = "/Account/AccessDenied";
             });
 
             // 3. Add MVC Controllers and Views
@@ -43,16 +44,19 @@ namespace POSSystem
 
             var app = builder.Build();
 
-            // 4. Automatically ensure database tables exist and seed default POS roles
+            // 4. Automatically ensure database tables exist and seed roles on startup
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
                 try
                 {
                     var context = services.GetRequiredService<ApplicationDbContext>();
+                    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+                    var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+
                     context.Database.Migrate();
 
-                    // Seed default POS roles from UserRole Enum if none exist
+                    // Seed default POS roles in custom POSRoles table
                     if (!context.POSRoles.Any())
                     {
                         foreach (var roleName in Enum.GetNames<UserRole>())
@@ -60,6 +64,25 @@ namespace POSSystem
                             context.POSRoles.Add(new Role { Name = roleName });
                         }
                         context.SaveChanges();
+                    }
+
+                    // Seed Identity roles in AspNetRoles table (Admin, Manager, Cashier)
+                    foreach (var roleName in Enum.GetNames<UserRole>())
+                    {
+                        if (!roleManager.RoleExistsAsync(roleName).GetAwaiter().GetResult())
+                        {
+                            roleManager.CreateAsync(new IdentityRole(roleName)).GetAwaiter().GetResult();
+                        }
+                    }
+
+                    // Ensure krishpatel has the Admin role
+                    var adminUser = userManager.FindByNameAsync("krishpatel").GetAwaiter().GetResult();
+                    if (adminUser != null)
+                    {
+                        if (!userManager.IsInRoleAsync(adminUser, "Admin").GetAwaiter().GetResult())
+                        {
+                            userManager.AddToRoleAsync(adminUser, "Admin").GetAwaiter().GetResult();
+                        }
                     }
                 }
                 catch (Exception ex)

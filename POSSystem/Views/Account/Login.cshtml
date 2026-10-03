@@ -8,7 +8,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login – Financial POS</title>
+    <title>Login – Smart Retail POS System</title>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon.png?v=3" />
+    <link rel="icon" type="image/png" sizes="16x16" href="~/images/favicon.png?v=3" />
+    <link rel="shortcut icon" href="~/favicon.ico?v=3" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -99,9 +103,11 @@
 </head>
 <body>
     <div class="login-card">
-        <div class="brand-dot">N°</div>
+        <div class="mb-4">
+            <img src="~/images/logo.png?v=3" width="60" height="60" alt="Smart Retail POS" style="object-fit:contain;" />
+        </div>
         <h1>Welcome back</h1>
-        <p class="subtitle">Sign in to access the POS dashboard</p>
+        <p class="subtitle">Sign in to Smart Retail POS System</p>
 
         @if (!ViewData.ModelState.IsValid)
         {

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 // Person using the POS
@@ -22,7 +22,7 @@ namespace POSSystem.Models
         [ForeignKey("Role")]
         public int RoleId { get; set; }
 
-        public Role Role { get; set; }
+        public Role? Role { get; set; }
 
         // One User -> Many Sales
         public ICollection<Sale> Sales { get; set; }

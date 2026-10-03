@@ -3,8 +3,13 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - POS Dashboard</title>
+    <title>@ViewData["Title"] - Smart Retail POS System</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon.png?v=3" />
+    <link rel="icon" type="image/png" sizes="16x16" href="~/images/favicon.png?v=3" />
+    <link rel="shortcut icon" href="~/favicon.ico?v=3" />
+
     <!-- Google Fonts: Plus Jakarta Sans (Matches reference design) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -166,13 +171,15 @@
             left: var(--sidebar-width);
             right: 0;
             height: var(--topbar-height);
-            background: var(--bg-page);
+            background: rgba(244, 243, 239, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 36px;
             z-index: 1030;
-            border-bottom: 1px solid rgba(0,0,0,0.03);
+            border-bottom: 1px solid var(--border-soft);
         }
 
         .search-pill-box {
@@ -248,9 +255,8 @@
         /* ── Main Canvas ── */
         #main-content {
             margin-left: var(--sidebar-width);
-            margin-top: var(--topbar-height);
-            padding: 16px 36px 60px;
-            min-height: calc(100vh - var(--topbar-height));
+            padding: calc(var(--topbar-height) + 24px) 36px 60px;
+            min-height: 100vh;
         }
 
         /* ── Themed Card Styling (Matches Reference) ── */
@@ -481,10 +487,10 @@
     <!-- ══ Sleek Modern Sidebar ══ -->
     <div id="sidebar">
         <a class="brand-container" asp-controller="Home" asp-action="Index">
-            <div class="brand-badge">Nº</div>
+            <img src="~/images/logo.png?v=3" width="42" height="42" alt="Smart Retail POS" style="object-fit:contain;" />
             <div>
-                <div class="brand-title">Financial POS</div>
-                <div class="brand-subtitle">Retail Management</div>
+                <div class="brand-title">Smart Retail POS</div>
+                <div class="brand-subtitle">System</div>
             </div>
         </a>
 
@@ -495,35 +501,41 @@
                 <i class="fa-solid fa-chart-pie"></i> Dashboard
             </a>
 
-            <div class="menu-label">Inventory</div>
-            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Category" ? "active" : "")"
-               asp-controller="Category" asp-action="Index">
-                <i class="fa-solid fa-tags"></i> Categories
-            </a>
-            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Product" ? "active" : "")"
-               asp-controller="Product" asp-action="Index">
-                <i class="fa-solid fa-box-archive"></i> Products
-            </a>
-
             <div class="menu-label">Transactions</div>
-            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
-               asp-controller="Sale" asp-action="Index">
-                <i class="fa-solid fa-receipt"></i> Sales History
-            </a>
             <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
                asp-controller="Sale" asp-action="Create">
                 <i class="fa-solid fa-cart-plus"></i> New Sale
             </a>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+               asp-controller="Sale" asp-action="Index">
+                <i class="fa-solid fa-receipt"></i> Sales History
+            </a>
+
+            <div class="menu-label">Inventory</div>
+            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Product" ? "active" : "")"
+               asp-controller="Product" asp-action="Index">
+                <i class="fa-solid fa-box-archive"></i> Products
+            </a>
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Category" ? "active" : "")"
+                   asp-controller="Category" asp-action="Index">
+                    <i class="fa-solid fa-tags"></i> Categories
+                </a>
+            }
 
             <div class="menu-label">Administration</div>
             <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Customer" ? "active" : "")"
                asp-controller="Customer" asp-action="Index">
                 <i class="fa-solid fa-users"></i> Customers
             </a>
-            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "User" ? "active" : "")"
-               asp-controller="User" asp-action="Index">
-                <i class="fa-solid fa-user-shield"></i> Staff & Users
-            </a>
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "User" ? "active" : "")"
+                   asp-controller="User" asp-action="Index">
+                    <i class="fa-solid fa-user-shield"></i> Staff &amp; Users
+                </a>
+            }
         </nav>
     </div>
 
@@ -537,7 +549,11 @@
         <div class="d-flex align-items-center gap-3">
             @if (User.Identity!.IsAuthenticated)
             {
-                <!-- Show logged-in user name and logout button -->
+                var roleLabel = User.IsInRole("Admin") ? "Store Owner (Admin)" 
+                              : User.IsInRole("Manager") ? "Store Manager" 
+                              : "Cashier";
+
+                <!-- Show logged-in user name, role tag, and logout button -->
                 <div class="user-profile-pill">
                     <div class="user-avatar">
                         @(User.Identity.Name?.Length >= 2
@@ -546,7 +562,7 @@
                     </div>
                     <div>
                         <div class="user-name">@User.Identity.Name</div>
-                        <div class="user-role-tag">POS User</div>
+                        <div class="user-role-tag" style="color:var(--accent-coral);font-weight:700;">@roleLabel</div>
                     </div>
                 </div>
                 <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">

@@ -93,6 +93,13 @@ namespace POSSystem.Data
                 .HasOne(p => p.Sale)
                 .WithOne(s => s.Payment)
                 .HasForeignKey<Payment>(p => p.SaleId);
+
+            // Precision for all currency decimals
+            modelBuilder.Entity<Product>().Property(p => p.Price).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Sale>().Property(s => s.TotalAmount).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<SaleItem>().Property(si => si.UnitPrice).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<SaleItem>().Property(si => si.TotalPrice).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Payment>().Property(p => p.Amount).HasColumnType("decimal(18,2)");
         }
     }
 }
