@@ -67,12 +67,18 @@
                                 <span class="pill-badge pill-gray">@item.SalesCount sales</span>
                             </td>
                             <td class="text-end">
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn-light-pill me-1">
-                                    <i class="fa-solid fa-pen-to-square"></i> Edit
-                                </a>
-                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn-light-pill text-danger">
-                                    <i class="fa-solid fa-trash"></i> Delete
-                                </a>
+                                @if (item.Role != "Admin" || User.IsInRole("Admin"))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn-light-pill me-1">
+                                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                                    </a>
+                                }
+                                @if (User.IsInRole("Admin") && item.Role != "Admin")
+                                {
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn-light-pill text-danger">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </a>
+                                }
                             </td>
                         </tr>
                         i++;

@@ -8,7 +8,7 @@ using POSSystem.Models;
 
 namespace POSSystem.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin,Manager")]
     public class UserController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -129,6 +129,12 @@ namespace POSSystem.Controllers
             var roles = await _userManager.GetRolesAsync(user);
             var currentRole = roles.FirstOrDefault() ?? "Cashier";
 
+            if (currentRole == "Admin" && !User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "Managers are not permitted to edit Administrator accounts.";
+                return RedirectToAction("Index");
+            }
+
             ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), currentRole);
             return View(new StaffUserViewModel
             {
@@ -145,6 +151,18 @@ namespace POSSystem.Controllers
         {
             var user = await _userManager.FindByIdAsync(model.Id);
             if (user == null) return NotFound();
+
+            var targetRoles = await _userManager.GetRolesAsync(user);
+            if (targetRoles.Contains("Admin") && !User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "Managers are not permitted to edit Administrator accounts.";
+                return RedirectToAction("Index");
+            }
+
+            if (model.Role == "Admin" && !User.IsInRole("Admin"))
+            {
+                ModelState.AddModelError("Role", "Only Administrators can assign the Admin role.");
+            }
 
             if (ModelState.IsValid)
             {
@@ -222,13 +240,20 @@ namespace POSSystem.Controllers
             return View(model);
         }
 
-        // 6. DELETE (Confirm removal)
+        // 6. DELETE (Confirm removal - Admin only)
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
             var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("Admin"))
+            {
+                TempData["Error"] = "Administrator accounts cannot be deleted.";
+                return RedirectToAction("Index");
+            }
+
             return View(new StaffUserViewModel
             {
                 Id = user.Id,
@@ -238,12 +263,20 @@ namespace POSSystem.Controllers
             });
         }
 
-        // 7. DELETE (Smart Unlink: Safely unlinks past sales so sales history stays intact, removes staff account)
+        // 7. DELETE (Smart Unlink - Admin only)
         [HttpPost, ActionName("Delete")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("Admin"))
+            {
+                TempData["Error"] = "Administrator accounts cannot be deleted.";
+                return RedirectToAction("Index");
+            }
 
             // Prevent deleting the currently logged-in account
             string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
