@@ -27,10 +27,13 @@
                     <span class="input-group-text bg-white border-end-0" style="border-radius:14px 0 0 14px;border-color:var(--border-soft);">
                         <i class="fa-solid fa-qrcode text-muted"></i>
                     </span>
-                    <input type="text" id="barcodeScanner" class="form-control border-start-0" placeholder="Scan barcode or type SKU / Name and press Enter..." style="border-radius:0 14px 14px 0;" autofocus />
+                    <input type="text" id="barcodeScanner" class="form-control border-start-0 border-end-0" placeholder="Scan barcode or type SKU / Name..." autofocus />
+                    <button type="button" id="btnScanCode" class="btn-coral" style="border-radius:0 14px 14px 0;padding:0 20px;">
+                        <i class="fa-solid fa-plus me-1"></i> Add
+                    </button>
                 </div>
                 <div id="scanFeedback" style="font-size:11px;color:var(--text-subtle);margin-top:4px;">
-                    Tip: USB barcode scanners send Enter key automatically to add item immediately.
+                    Tip: Click Add or press Enter. USB barcode scanners automatically submit.
                 </div>
             </div>
 
@@ -316,29 +319,38 @@
         updateCartUI();
     }
 
-    // 1. Barcode / SKU Scanner Handler (Triggered on Enter key)
+    // 1. Barcode / SKU Scanner Handler (Triggered on Enter key or clicking Add button)
+    function handleScanLookup() {
+        const input = $('#barcodeScanner');
+        const term = input.val().trim().toLowerCase();
+        if (!term) return;
+
+        // Search by SKU exact, Product ID exact, or Name contains
+        const matched = catalog.find(p => 
+            (p.sku && p.sku.toLowerCase() === term) ||
+            p.id.toString() === term ||
+            p.name.toLowerCase() === term ||
+            p.name.toLowerCase().includes(term)
+        );
+
+        if (matched) {
+            addToCart(matched.id, 1);
+            input.val('').focus();
+            $('#scanFeedback').html(`<span class="text-success"><i class="fa-solid fa-check"></i> Added: <strong>${matched.name}</strong></span>`);
+        } else {
+            $('#scanFeedback').html(`<span class="text-danger"><i class="fa-solid fa-circle-exclamation"></i> No stock found matching "${term}"</span>`);
+        }
+    }
+
     $('#barcodeScanner').on('keydown', function (e) {
         if (e.which === 13) { // Enter key
             e.preventDefault();
-            const term = $(this).val().trim().toLowerCase();
-            if (!term) return;
-
-            // Search by SKU exact, Product ID exact, or Name contains
-            const matched = catalog.find(p => 
-                (p.sku && p.sku.toLowerCase() === term) ||
-                p.id.toString() === term ||
-                p.name.toLowerCase() === term ||
-                p.name.toLowerCase().includes(term)
-            );
-
-            if (matched) {
-                addToCart(matched.id, 1);
-                $(this).val('');
-                $('#scanFeedback').html(`<span class="text-success"><i class="fa-solid fa-check"></i> Added: <strong>${matched.name}</strong></span>`);
-            } else {
-                $('#scanFeedback').html(`<span class="text-danger"><i class="fa-solid fa-circle-exclamation"></i> No stock found matching "${term}"</span>`);
-            }
+            handleScanLookup();
         }
+    });
+
+    $('#btnScanCode').click(function () {
+        handleScanLookup();
     });
 
     // 2. Manual Product Selection Button

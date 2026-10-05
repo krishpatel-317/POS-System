@@ -22,6 +22,6 @@ namespace POSSystem.Models
         [ForeignKey("Sale")]
         public int SaleId { get; set; }
 
-        public Sale Sale { get; set; } = null!;
+        public Sale? Sale { get; set; }
     }
 }

@@ -52,6 +52,6 @@ namespace POSSystem.Models
             = new List<SaleItem>();
 
         // One Sale -> One Payment
-        public Payment Payment { get; set; } = null!;
+        public Payment? Payment { get; set; }
     }
 }
