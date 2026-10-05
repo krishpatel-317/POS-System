@@ -502,10 +502,13 @@
             </a>
 
             <div class="menu-label">Transactions</div>
-            <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
-               asp-controller="Sale" asp-action="Create">
-                <i class="fa-solid fa-cart-plus"></i> New Sale
-            </a>
+            @if (!User.IsInRole("Admin"))
+            {
+                <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
+                   asp-controller="Sale" asp-action="Create">
+                    <i class="fa-solid fa-cart-plus"></i> New Sale
+                </a>
+            }
             <a class="nav-pill-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Sale" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
                asp-controller="Sale" asp-action="Index">
                 <i class="fa-solid fa-receipt"></i> Sales History

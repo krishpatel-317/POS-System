@@ -99,9 +99,12 @@
                     </a>
                 }
             }
-            <a asp-action="Create" class="btn-coral">
-                <i class="fa-solid fa-cart-plus"></i> New Sale
-            </a>
+            @if (!User.IsInRole("Admin"))
+            {
+                <a asp-action="Create" class="btn-coral">
+                    <i class="fa-solid fa-cart-plus"></i> New Sale
+                </a>
+            }
         </div>
     </div>
 
@@ -167,9 +170,12 @@
                 @(showAllStoreSales ? "No transactions found in the database." : "You haven't processed any sales yet. Click 'New Sale' to record an order under your account!")
             </p>
             <div class="d-flex justify-content-center gap-2 mt-3">
-                <a asp-action="Create" class="btn-coral">
-                    <i class="fa-solid fa-cart-plus"></i> Record Your First Sale
-                </a>
+                @if (!User.IsInRole("Admin"))
+                {
+                    <a asp-action="Create" class="btn-coral">
+                        <i class="fa-solid fa-cart-plus"></i> Record Your First Sale
+                    </a>
+                }
                 @if (User.IsInRole("Admin") && !showAllStoreSales)
                 {
                     <a asp-action="Index" asp-route-showAllStoreSales="true" class="btn-light-pill">

@@ -242,9 +242,15 @@ namespace POSSystem.Controllers
             return RedirectToAction("Details", new { id = sale.SaleId });
         }
 
-        // 5. CREATE (Show POS Cart Interface)
+        // 5. CREATE (Show POS Cart Interface - Cashier only)
         public IActionResult Create()
         {
+            if (User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "Store Administrators (Boss) oversee operations and do not process counter sales. Counter checkout is reserved for Cashiers.";
+                return RedirectToAction("Index");
+            }
+
             string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
             string currentUserName = User.Identity?.Name ?? "User";
 
@@ -286,6 +292,12 @@ namespace POSSystem.Controllers
             List<int> quantities, 
             List<decimal> unitPrices)
         {
+            if (User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "Store Administrators (Boss) cannot process sales.";
+                return RedirectToAction("Index");
+            }
+
             // Ensure cart is not empty
             if (productIds == null || productIds.Count == 0)
             {

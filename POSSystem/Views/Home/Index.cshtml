@@ -21,9 +21,12 @@
                 </div>
             </div>
 
-            <a asp-controller="Sale" asp-action="Create" class="btn-coral" style="padding:10px 20px;font-size:13px;">
-                <i class="fa-solid fa-cart-plus"></i> New Sale
-            </a>
+            @if (!User.IsInRole("Admin"))
+            {
+                <a asp-controller="Sale" asp-action="Create" class="btn-coral" style="padding:10px 20px;font-size:13px;">
+                    <i class="fa-solid fa-cart-plus"></i> New Sale
+                </a>
+            }
         </div>
     </div>
 
