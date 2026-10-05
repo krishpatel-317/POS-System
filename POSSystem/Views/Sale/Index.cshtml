@@ -69,17 +69,20 @@
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <!-- Export CSV Button -->
-            <a asp-action="ExportCsv" 
-               asp-route-cashierId="@selectedCashier" 
-               asp-route-paymentMethod="@selectedPayment" 
-               asp-route-dateRange="@selectedDate" 
-               asp-route-search="@search" 
-               asp-route-showAllStoreSales="@showAllStoreSales" 
-               class="btn-light-pill" 
-               title="Export current filtered sales to CSV spreadsheet">
-                <i class="fa-solid fa-file-csv text-success"></i> Export CSV
-            </a>
+            <!-- Export CSV Button (Admin only) -->
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="ExportCsv" 
+                   asp-route-cashierId="@selectedCashier" 
+                   asp-route-paymentMethod="@selectedPayment" 
+                   asp-route-dateRange="@selectedDate" 
+                   asp-route-search="@search" 
+                   asp-route-showAllStoreSales="@showAllStoreSales" 
+                   class="btn-light-pill" 
+                   title="Export current filtered sales to CSV spreadsheet">
+                    <i class="fa-solid fa-file-csv text-success"></i> Export CSV
+                </a>
+            }
 
             @if (User.IsInRole("Admin"))
             {
@@ -167,7 +170,7 @@
                 <a asp-action="Create" class="btn-coral">
                     <i class="fa-solid fa-cart-plus"></i> Record Your First Sale
                 </a>
-                @if (!showAllStoreSales)
+                @if (User.IsInRole("Admin") && !showAllStoreSales)
                 {
                     <a asp-action="Index" asp-route-showAllStoreSales="true" class="btn-light-pill">
                         <i class="fa-solid fa-users"></i> View Other Staff Sales

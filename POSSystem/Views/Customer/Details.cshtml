@@ -36,9 +36,12 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <a asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn-light-pill">
-                <i class="fa-solid fa-pen-to-square"></i> Edit Profile
-            </a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn-light-pill">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit Profile
+                </a>
+            }
             <a asp-controller="Sale" asp-action="Create" class="btn-coral">
                 <i class="fa-solid fa-cash-register"></i> New Sale
             </a>

@@ -179,12 +179,15 @@
                                 <a asp-action="Details" asp-route-id="@item.CustomerId" class="btn-light-pill me-1" title="View Customer Profile & Purchase History">
                                     <i class="fa-solid fa-clock-rotate-left"></i> History
                                 </a>
-                                <a asp-action="Edit" asp-route-id="@item.CustomerId" class="btn-light-pill me-1" title="Edit Customer">
-                                    <i class="fa-solid fa-pen-to-square"></i> Edit
-                                </a>
-                                <a asp-action="Delete" asp-route-id="@item.CustomerId" class="btn-light-pill text-danger" title="Delete Customer">
-                                    <i class="fa-solid fa-trash"></i> Delete
-                                </a>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.CustomerId" class="btn-light-pill me-1" title="Edit Customer">
+                                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.CustomerId" class="btn-light-pill text-danger" title="Delete Customer">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </a>
+                                }
                             </td>
                         </tr>
                         i++;
