@@ -81,7 +81,7 @@
                 <i class="fa-solid fa-file-csv text-success"></i> Export CSV
             </a>
 
-            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            @if (User.IsInRole("Admin"))
             {
                 if (showAllStoreSales)
                 {
@@ -106,7 +106,7 @@
     <form method="get" asp-action="Index" class="mb-4">
         <input type="hidden" name="showAllStoreSales" value="@(showAllStoreSales ? "true" : "false")" />
         <div class="row g-2 align-items-center">
-            <div class="@(User.IsInRole("Admin") || User.IsInRole("Manager") ? "col-lg-3 col-md-4" : "col-lg-4 col-md-5")">
+            <div class="@(User.IsInRole("Admin") ? "col-lg-3 col-md-4" : "col-lg-4 col-md-5")">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0" style="border-radius:14px 0 0 14px; border-color:var(--border-soft);">
                         <i class="fa-solid fa-magnifying-glass text-muted"></i>
@@ -115,7 +115,7 @@
                 </div>
             </div>
 
-            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            @if (User.IsInRole("Admin"))
             {
                 <div class="col-lg-2 col-md-3">
                     <select name="cashierId" asp-items="ViewBag.Cashiers" class="form-select">

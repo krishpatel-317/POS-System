@@ -24,7 +24,7 @@ namespace POSSystem.Controllers
         }
 
         // 2. CREATE (Show Form - Admin, Manager)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
             return View();
@@ -32,7 +32,7 @@ namespace POSSystem.Controllers
 
         // 3. CREATE (Save to Database - Admin, Manager)
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(Category category)
         {
             ModelState.Remove("Products");
@@ -61,7 +61,7 @@ namespace POSSystem.Controllers
         }
 
         // 4. EDIT (Show Form - Admin, Manager)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -72,7 +72,7 @@ namespace POSSystem.Controllers
 
         // 5. EDIT (Update in Database - Admin, Manager)
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(Category category)
         {
             ModelState.Remove("Products");
@@ -104,7 +104,7 @@ namespace POSSystem.Controllers
         }
 
         // 6. DELETE (Show Confirmation - Admin, Manager)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var category = await _context.Categories.Include(c => c.Products).FirstOrDefaultAsync(c => c.CategoryId == id);
@@ -115,7 +115,7 @@ namespace POSSystem.Controllers
 
         // 7. DELETE (Smart Reassignment: Reassigns products to 'General' fallback, removes category)
         [HttpPost, ActionName("Delete")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var category = await _context.Categories.Include(c => c.Products).FirstOrDefaultAsync(c => c.CategoryId == id);

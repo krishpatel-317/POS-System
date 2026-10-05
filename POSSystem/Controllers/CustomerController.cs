@@ -154,7 +154,7 @@ namespace POSSystem.Controllers
         }
 
         // 4. EDIT (Show Form - Admin, Manager)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public IActionResult Edit(int id)
         {
             var customer = _context.Customers.Find(id);
@@ -165,7 +165,7 @@ namespace POSSystem.Controllers
 
         // 5. EDIT (Update in Database - Admin, Manager)
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public IActionResult Edit(Customer customer)
         {
             ModelState.Remove("Sales");
@@ -211,7 +211,7 @@ namespace POSSystem.Controllers
         }
 
         // 6. DELETE (Show Confirmation - Admin, Manager)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public IActionResult Delete(int id)
         {
             var customer = _context.Customers.Include(c => c.Sales).FirstOrDefault(c => c.CustomerId == id);
@@ -222,7 +222,7 @@ namespace POSSystem.Controllers
 
         // 7. DELETE (Smart Unlink: Reassigns past sales to Walk-in, removes customer)
         [HttpPost, ActionName("Delete")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public IActionResult DeleteConfirmed(int id)
         {
             var customer = _context.Customers.Include(c => c.Sales).FirstOrDefault(c => c.CustomerId == id);

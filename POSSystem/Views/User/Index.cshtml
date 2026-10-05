@@ -10,7 +10,7 @@
                 <i class="fa-solid fa-user-shield" style="color:var(--accent-coral);"></i> Staff &amp; System Users
             </h5>
             <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">
-                Cashiers, managers, and administrators assigned to system access roles.
+                Cashiers and administrators assigned to system access roles.
             </p>
         </div>
         <a asp-action="Create" class="btn-coral">
@@ -58,7 +58,7 @@
                             </td>
                             <td><span style="color:var(--text-subtle);font-size:13px;">@item.Email</span></td>
                             <td>
-                                <span class="pill-badge @(item.Role == "Admin" ? "pill-coral" : item.Role == "Manager" ? "pill-green" : "pill-dark")">
+                                <span class="pill-badge @(item.Role == "Admin" ? "pill-coral" : "pill-dark")">
                                     <i class="fa-solid fa-shield-halved" style="font-size:10px;"></i>
                                     @item.Role
                                 </span>

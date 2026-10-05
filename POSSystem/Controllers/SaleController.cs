@@ -28,7 +28,7 @@ namespace POSSystem.Controllers
             string currentUserName = User.Identity?.Name ?? "User";
 
             // Strict Privilege Isolation: Cashiers can NEVER see other staff's sales
-            bool isPrivileged = User.IsInRole("Admin") || User.IsInRole("Manager");
+            bool isPrivileged = User.IsInRole("Admin");
             if (!isPrivileged)
             {
                 cashierId = currentUserId;
@@ -116,7 +116,7 @@ namespace POSSystem.Controllers
         public IActionResult ExportCsv(string? cashierId, string? paymentMethod, string? dateRange, string? search, bool showAllStoreSales = false)
         {
             string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
-            bool isPrivileged = User.IsInRole("Admin") || User.IsInRole("Manager");
+            bool isPrivileged = User.IsInRole("Admin");
             if (!isPrivileged)
             {
                 cashierId = currentUserId;
@@ -205,9 +205,9 @@ namespace POSSystem.Controllers
             return View(sale);
         }
 
-        // 4. VOID / CANCEL SALE (Admin / Manager only - restores stock)
+        // 4. VOID / CANCEL SALE (Admin only - restores stock)
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public IActionResult Void(int id)
         {
             var sale = _context.Sales

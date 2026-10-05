@@ -261,7 +261,7 @@
                                     <span class="pill-badge @(prod.StockQuantity == 0 ? "pill-coral" : "pill-yellow")">
                                         @prod.StockQuantity left
                                     </span>
-                                    @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                                    @if (User.IsInRole("Admin"))
                                     {
                                         <form asp-controller="Product" asp-action="Restock" method="post" style="margin:0;">
                                             <input type="hidden" name="id" value="@prod.ProductId" />

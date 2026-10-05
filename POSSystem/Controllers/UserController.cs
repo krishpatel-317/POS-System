@@ -8,7 +8,7 @@ using POSSystem.Models;
 
 namespace POSSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Roles = "Admin")]
     public class UserController : Controller
     {
         private readonly ApplicationDbContext _context;

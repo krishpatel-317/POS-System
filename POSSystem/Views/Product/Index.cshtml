@@ -13,7 +13,7 @@
             </h4>
             <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">Manage your inventory and stock status</p>
         </div>
-        @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+        @if (User.IsInRole("Admin"))
         {
             <a asp-action="Create" class="btn-coral">
                 <i class="fa-solid fa-plus"></i> Add Product
@@ -87,7 +87,7 @@
                         <th>Category</th>
                         <th>Price</th>
                         <th>Stock Status</th>
-                        @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                        @if (User.IsInRole("Admin"))
                         {
                             <th class="text-end">Actions</th>
                         }
@@ -137,7 +137,7 @@
                                     <span class="pill-badge pill-green"><i class="fa-solid fa-circle-check"></i> @p.StockQuantity in stock</span>
                                 }
                             </td>
-                            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                            @if (User.IsInRole("Admin"))
                             {
                                 <td class="text-end">
                                     <a asp-action="Edit" asp-route-id="@p.ProductId" class="btn-light-pill me-1">

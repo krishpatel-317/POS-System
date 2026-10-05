@@ -25,7 +25,7 @@ namespace POSSystem.Controllers
             ViewData["Title"] = "Dashboard";
 
             string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
-            bool isPrivileged = User.IsInRole("Admin") || User.IsInRole("Manager");
+            bool isPrivileged = User.IsInRole("Admin");
             ViewBag.IsPrivileged = isPrivileged;
 
             // 1. Basic Counts

@@ -7,8 +7,7 @@ namespace POSSystem.Models
     public enum UserRole
     {
         Admin,
-        Cashier,
-        Manager
+        Cashier
     }
 
     /// <summary>

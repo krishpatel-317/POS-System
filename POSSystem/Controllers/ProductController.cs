@@ -41,7 +41,7 @@ namespace POSSystem.Controllers
         }
 
         // 2. CREATE (PRIVILEGE: Only Admin and Manager can add new inventory items)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
             ViewBag.Categories = GetCategorySelectList();
@@ -50,7 +50,7 @@ namespace POSSystem.Controllers
 
         // 3. CREATE (Save to Database)
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(Product product)
         {
             ModelState.Remove("Category");
@@ -96,7 +96,7 @@ namespace POSSystem.Controllers
         }
 
         // 4. EDIT (PRIVILEGE: Only Admin and Manager can adjust prices or stock)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id)
         {
             var product = await _context.Products.FindAsync(id);
@@ -108,7 +108,7 @@ namespace POSSystem.Controllers
 
         // 5. EDIT (Update in Database)
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(Product product)
         {
             ModelState.Remove("Category");
@@ -174,7 +174,7 @@ namespace POSSystem.Controllers
         }
 
         // 6. DELETE (PRIVILEGE: Only Admin and Manager can delete products)
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _context.Products.Include(p => p.Category).Include(p => p.SaleItems).FirstOrDefaultAsync(p => p.ProductId == id && !p.IsArchived);
@@ -185,7 +185,7 @@ namespace POSSystem.Controllers
 
         // 7. DELETE (Smart Deletion: safely archives sold items to keep receipts, deletes unsold items completely)
         [HttpPost, ActionName("Delete")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var product = await _context.Products.Include(p => p.SaleItems).FirstOrDefaultAsync(p => p.ProductId == id);
@@ -213,7 +213,7 @@ namespace POSSystem.Controllers
 
         // 8. RESTOCK (Quick Reorder / Stock In - Admin & Manager)
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Restock(int id, int additionalStock, string? returnUrl)
         {
             var product = await _context.Products.FindAsync(id);
