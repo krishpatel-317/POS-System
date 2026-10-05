@@ -42,6 +42,18 @@
                     <label asp-for="Role" class="form-label">Assign Role <span class="text-danger">*</span></label>
                     <select asp-for="Role" asp-items="ViewBag.Roles" class="form-select" required>
                     </select>
+                    @if (ViewBag.AnotherAdminExists is bool anotherAdmin && anotherAdmin)
+                    {
+                        <div style="font-size:12px;color:var(--text-subtle);margin-top:6px;line-height:1.4;">
+                            <i class="fa-solid fa-circle-info text-primary"></i> <strong>Single Store Owner Rule:</strong> This shop already has a primary Store Owner (Admin). Only 1 Admin is permitted per store.
+                        </div>
+                    }
+                    else if (ViewBag.IsAdminUser is bool isAdmin && isAdmin)
+                    {
+                        <div style="font-size:12px;color:var(--text-subtle);margin-top:6px;line-height:1.4;">
+                            <i class="fa-solid fa-crown text-warning"></i> <strong>Primary Store Owner:</strong> This account is the primary Administrator for this shop.
+                        </div>
+                    }
                     <span asp-validation-for="Role" class="text-danger" style="font-size:12px;"></span>
                 </div>
 

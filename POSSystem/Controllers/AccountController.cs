@@ -67,8 +67,10 @@ namespace POSSystem.Controllers
         // ── GET: /Account/Register ───────────────────────────────────────────
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult Register()
+        public async Task<IActionResult> Register()
         {
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            ViewBag.AdminExists = adminUsers.Count > 0;
             return View();
         }
 
@@ -77,6 +79,16 @@ namespace POSSystem.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            bool adminExists = adminUsers.Count > 0;
+            ViewBag.AdminExists = adminExists;
+
+            if (model.Role == "Admin" && adminExists)
+            {
+                ModelState.AddModelError("Role", "Only 1 Administrator account (Store Owner) is permitted for this shop. Please register as Cashier.");
+                return View(model);
+            }
+
             if (!ModelState.IsValid)
                 return View(model);
 
@@ -90,7 +102,7 @@ namespace POSSystem.Controllers
 
             if (result.Succeeded)
             {
-                // Assign selected role (Admin, Manager, or Cashier)
+                // Assign selected role (Admin or Cashier)
                 string roleName = string.IsNullOrWhiteSpace(model.Role) ? "Cashier" : model.Role;
                 if (!await _roleManager.RoleExistsAsync(roleName))
                 {

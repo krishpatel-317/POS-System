@@ -41,6 +41,12 @@
                     <label asp-for="Role" class="form-label">Assign Role <span class="text-danger">*</span></label>
                     <select asp-for="Role" asp-items="ViewBag.Roles" class="form-select" required>
                     </select>
+                    @if (ViewBag.AdminExists is bool adminExists && adminExists)
+                    {
+                        <div style="font-size:12px;color:var(--text-subtle);margin-top:6px;line-height:1.4;">
+                            <i class="fa-solid fa-circle-info text-primary"></i> <strong>Single Store Owner Rule:</strong> This shop already has a registered Store Owner (Admin). All additional staff members are assigned as <strong>Cashier</strong>.
+                        </div>
+                    }
                     <span asp-validation-for="Role" class="text-danger" style="font-size:12px;"></span>
                 </div>
 

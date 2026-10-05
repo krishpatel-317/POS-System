@@ -47,10 +47,20 @@ namespace POSSystem.Controllers
         }
 
         // 2. CREATE (Show Add Staff Form)
-        public IActionResult Create()
+        // 2. CREATE (Show Add Staff Form)
+        public async Task<IActionResult> Create()
         {
-            ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>());
-            return View(new StaffUserViewModel());
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            bool adminExists = adminUsers.Count > 0;
+
+            // In this shop, only 1 Admin is permitted. If an Admin already exists, all new staff must be Cashiers.
+            var availableRoles = adminExists 
+                ? new List<string> { "Cashier" } 
+                : Enum.GetNames<UserRole>().ToList();
+
+            ViewBag.Roles = new SelectList(availableRoles);
+            ViewBag.AdminExists = adminExists;
+            return View(new StaffUserViewModel { Role = "Cashier" });
         }
 
         // 3. CREATE (Create ASP.NET Core Identity account and assign role)
@@ -60,6 +70,15 @@ namespace POSSystem.Controllers
             if (string.IsNullOrWhiteSpace(model.Password))
             {
                 ModelState.AddModelError("Password", "Password is required for new accounts.");
+            }
+
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            bool adminExists = adminUsers.Count > 0;
+
+            // Enforce strictly 1 Admin per shop
+            if (model.Role == "Admin" && adminExists)
+            {
+                ModelState.AddModelError("Role", "Only 1 Administrator account (Store Owner) is permitted for this shop. All additional staff accounts must be Cashiers.");
             }
 
             if (ModelState.IsValid)
@@ -72,7 +91,9 @@ namespace POSSystem.Controllers
                 if (existingIdentity != null)
                 {
                     ModelState.AddModelError("Username", "A staff user with this username already exists.");
-                    ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                    var availableRoles = adminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+                    ViewBag.Roles = new SelectList(availableRoles, model.Role);
+                    ViewBag.AdminExists = adminExists;
                     return View(model);
                 }
 
@@ -83,7 +104,9 @@ namespace POSSystem.Controllers
                     if (existingEmail != null)
                     {
                         ModelState.AddModelError("Email", "A staff user with this email address already exists.");
-                        ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                        var availableRoles = adminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+                        ViewBag.Roles = new SelectList(availableRoles, model.Role);
+                        ViewBag.AdminExists = adminExists;
                         return View(model);
                     }
                 }
@@ -101,7 +124,9 @@ namespace POSSystem.Controllers
                     {
                         ModelState.AddModelError("", error.Description);
                     }
-                    ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                    var availableRoles = adminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+                    ViewBag.Roles = new SelectList(availableRoles, model.Role);
+                    ViewBag.AdminExists = adminExists;
                     return View(model);
                 }
 
@@ -116,7 +141,9 @@ namespace POSSystem.Controllers
                 return RedirectToAction("Index");
             }
 
-            ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+            var fallbackRoles = adminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+            ViewBag.Roles = new SelectList(fallbackRoles, model.Role);
+            ViewBag.AdminExists = adminExists;
             return View(model);
         }
 
@@ -129,13 +156,17 @@ namespace POSSystem.Controllers
             var roles = await _userManager.GetRolesAsync(user);
             var currentRole = roles.FirstOrDefault() ?? "Cashier";
 
-            if (currentRole == "Admin" && !User.IsInRole("Admin"))
-            {
-                TempData["Error"] = "Managers are not permitted to edit Administrator accounts.";
-                return RedirectToAction("Index");
-            }
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            bool anotherAdminExists = adminUsers.Any(u => u.Id != user.Id);
 
-            ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), currentRole);
+            // In this shop, only 1 Admin is allowed. If another admin exists, this user can only be a Cashier.
+            var availableRoles = anotherAdminExists
+                ? new List<string> { "Cashier" }
+                : Enum.GetNames<UserRole>().ToList();
+
+            ViewBag.Roles = new SelectList(availableRoles, currentRole);
+            ViewBag.AnotherAdminExists = anotherAdminExists;
+            ViewBag.IsAdminUser = currentRole == "Admin";
             return View(new StaffUserViewModel
             {
                 Id = user.Id,
@@ -152,16 +183,20 @@ namespace POSSystem.Controllers
             var user = await _userManager.FindByIdAsync(model.Id);
             if (user == null) return NotFound();
 
-            var targetRoles = await _userManager.GetRolesAsync(user);
-            if (targetRoles.Contains("Admin") && !User.IsInRole("Admin"))
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            bool anotherAdminExists = adminUsers.Any(u => u.Id != user.Id);
+
+            // Enforce strictly 1 Admin per shop: cannot promote to Admin if another Admin already exists
+            if (model.Role == "Admin" && anotherAdminExists)
             {
-                TempData["Error"] = "Managers are not permitted to edit Administrator accounts.";
-                return RedirectToAction("Index");
+                ModelState.AddModelError("Role", "Only 1 Administrator account (Store Owner) is permitted for this shop. You cannot promote another account to Admin.");
             }
 
-            if (model.Role == "Admin" && !User.IsInRole("Admin"))
+            // A shop must always have at least 1 Admin: cannot demote the only Admin to Cashier
+            if (currentRoles.Contains("Admin") && model.Role != "Admin" && adminUsers.Count <= 1)
             {
-                ModelState.AddModelError("Role", "Only Administrators can assign the Admin role.");
+                ModelState.AddModelError("Role", "A shop must always have 1 Store Owner (Admin). You cannot demote the only Administrator.");
             }
 
             if (ModelState.IsValid)
@@ -174,7 +209,9 @@ namespace POSSystem.Controllers
                 if (existingUser != null && existingUser.Id != user.Id)
                 {
                     ModelState.AddModelError("Username", "Another staff user with this username already exists.");
-                    ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                    var availableRoles = anotherAdminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+                    ViewBag.Roles = new SelectList(availableRoles, model.Role);
+                    ViewBag.AnotherAdminExists = anotherAdminExists;
                     return View(model);
                 }
 
@@ -185,7 +222,9 @@ namespace POSSystem.Controllers
                     if (existingEmail != null && existingEmail.Id != user.Id)
                     {
                         ModelState.AddModelError("Email", "Another staff user with this email address already exists.");
-                        ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                        var availableRoles = anotherAdminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+                        ViewBag.Roles = new SelectList(availableRoles, model.Role);
+                        ViewBag.AnotherAdminExists = anotherAdminExists;
                         return View(model);
                     }
                 }
@@ -200,12 +239,13 @@ namespace POSSystem.Controllers
                     {
                         ModelState.AddModelError("", error.Description);
                     }
-                    ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                    var availableRoles = anotherAdminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+                    ViewBag.Roles = new SelectList(availableRoles, model.Role);
+                    ViewBag.AnotherAdminExists = anotherAdminExists;
                     return View(model);
                 }
 
                 // Update Role
-                var currentRoles = await _userManager.GetRolesAsync(user);
                 if (!currentRoles.Contains(model.Role))
                 {
                     await _userManager.RemoveFromRolesAsync(user, currentRoles);
@@ -227,7 +267,9 @@ namespace POSSystem.Controllers
                         {
                             ModelState.AddModelError("", error.Description);
                         }
-                        ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                        var availableRoles = anotherAdminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+                        ViewBag.Roles = new SelectList(availableRoles, model.Role);
+                        ViewBag.AnotherAdminExists = anotherAdminExists;
                         return View(model);
                     }
                 }
@@ -236,7 +278,9 @@ namespace POSSystem.Controllers
                 return RedirectToAction("Index");
             }
 
-            ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+            var editFallbackRoles = anotherAdminExists ? new List<string> { "Cashier" } : Enum.GetNames<UserRole>().ToList();
+            ViewBag.Roles = new SelectList(editFallbackRoles, model.Role);
+            ViewBag.AnotherAdminExists = anotherAdminExists;
             return View(model);
         }
 

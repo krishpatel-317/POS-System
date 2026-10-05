@@ -545,17 +545,11 @@
     <!-- ══ Floating Top Bar ══ -->
     <div id="topbar">
         <div class="d-flex align-items-center gap-2">
-            <span class="pill-badge pill-gray" style="font-weight:700;font-size:12px;">
-                <i class="fa-solid fa-store" style="color:var(--accent-coral);"></i> Smart Retail POS
-            </span>
-        </div>
-
-        <div class="d-flex align-items-center gap-3">
             @if (User.Identity!.IsAuthenticated)
             {
                 var roleLabel = User.IsInRole("Admin") ? "Store Owner (Admin)" : "Cashier";
 
-                <!-- Show logged-in user name, role tag, and logout button -->
+                <!-- Show logged-in user name and role tag on left -->
                 <div class="user-profile-pill">
                     <div class="user-avatar">
                         @(User.Identity.Name?.Length >= 2
@@ -567,6 +561,18 @@
                         <div class="user-role-tag" style="color:var(--accent-coral);font-weight:700;">@roleLabel</div>
                     </div>
                 </div>
+            }
+            else
+            {
+                <span class="pill-badge pill-gray" style="font-weight:700;font-size:12px;">
+                    <i class="fa-solid fa-store" style="color:var(--accent-coral);"></i> Smart Retail POS
+                </span>
+            }
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            @if (User.Identity!.IsAuthenticated)
+            {
                 <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
                     <button type="submit" class="btn-coral" style="padding:9px 18px;font-size:13px;border:none;cursor:pointer;">
                         <i class="fa-solid fa-right-from-bracket"></i> Logout

@@ -129,7 +129,10 @@
                     <label asp-for="Role" class="form-label">Assign Role</label>
                     <select asp-for="Role" class="form-select">
                         <option value="Cashier">Cashier (Staff)</option>
-                        <option value="Admin">Store Owner (Admin)</option>
+                        @if (!(ViewBag.AdminExists is bool ae && ae))
+                        {
+                            <option value="Admin">Store Owner (Admin)</option>
+                        }
                     </select>
                     <span asp-validation-for="Role" class="text-danger"></span>
                 </div>
