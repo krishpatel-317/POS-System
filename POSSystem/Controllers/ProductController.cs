@@ -117,22 +117,19 @@ namespace POSSystem.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var product = await _context.Products.Include(p => p.SaleItems).FirstOrDefaultAsync(p => p.ProductId == id);
+            if (product == null) return NotFound();
 
-            if (product != null)
+            // Delete Guard: Cannot delete product if it was sold in historical transactions
+            if (product.SaleItems != null && product.SaleItems.Count > 0)
             {
-                // Delete Guard: Cannot delete product if it was sold in historical transactions
-                if (product.SaleItems != null && product.SaleItems.Count > 0)
-                {
-                    TempData["Error"] = $"Cannot delete product '{product.Name}' because it exists in past sales receipts. Archive or reduce stock to 0 instead.";
-                    return RedirectToAction("Index");
-                }
-
-                _context.Products.Remove(product);
-                await _context.SaveChangesAsync();
-                
-                TempData["Success"] = $"Product '{product.Name}' deleted from inventory.";
+                TempData["Error"] = $"Cannot delete product '{product.Name}' because it exists in past sales receipts. Archive or reduce stock to 0 instead.";
+                return RedirectToAction("Index");
             }
 
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            
+            TempData["Success"] = $"Product '{product.Name}' deleted from inventory.";
             return RedirectToAction("Index");
         }
     }

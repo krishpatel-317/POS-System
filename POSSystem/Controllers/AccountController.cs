@@ -14,17 +14,14 @@ namespace POSSystem.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly ApplicationDbContext _context;
 
         public AccountController(UserManager<IdentityUser> userManager,
                                  SignInManager<IdentityUser> signInManager,
-                                 RoleManager<IdentityRole> roleManager,
-                                 ApplicationDbContext context)
+                                 RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
-            _context = context;
         }
 
         // ── GET: /Account/Login ──────────────────────────────────────────────
@@ -101,30 +98,8 @@ namespace POSSystem.Controllers
                 }
                 await _userManager.AddToRoleAsync(user, roleName);
 
-                // Ensure POS Role exists
-                var posRole = _context.POSRoles.FirstOrDefault(r => r.Name == roleName)
-                              ?? _context.POSRoles.FirstOrDefault();
-                if (posRole == null)
-                {
-                    posRole = new Role { Name = roleName };
-                    _context.POSRoles.Add(posRole);
-                    _context.SaveChanges();
-                }
-
-                // Sync into POS Users table for cashier tracking
-                string displayName = string.IsNullOrWhiteSpace(model.Name) ? model.Username : model.Name;
-                var posUser = new User
-                {
-                    Name = displayName,
-                    Username = model.Username,
-                    Password = "IdentityManaged",
-                    RoleId = posRole.RoleId
-                };
-                _context.POSUsers.Add(posUser);
-                _context.SaveChanges();
-
                 await _signInManager.SignInAsync(user, isPersistent: false);
-                TempData["Success"] = $"Account created for {displayName}! Role assigned: {roleName}.";
+                TempData["Success"] = $"Account created for {model.Username}! Role assigned: {roleName}.";
                 return RedirectToAction("Index", "Home");
             }
 

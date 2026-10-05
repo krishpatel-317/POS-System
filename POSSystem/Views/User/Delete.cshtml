@@ -1,4 +1,4 @@
-@model POSSystem.Models.User
+@model POSSystem.Models.StaffUserViewModel
 @{ 
     ViewData["Title"] = "Delete User"; 
 }
@@ -12,7 +12,7 @@
                 </div>
                 <h5 style="font-weight:800;color:var(--text-title);margin:0;">Delete Staff User?</h5>
                 <p style="font-size:13px;color:var(--text-subtle);margin-top:4px;">
-                    Are you sure you want to remove <strong>"@Model.Name"</strong>?
+                    Are you sure you want to remove <strong>"@Model.Username"</strong>?
                 </p>
             </div>
 
@@ -21,14 +21,18 @@
                     <span style="font-size:13px;color:var(--text-subtle);">Username</span>
                     <span style="font-weight:700;">@@@Model.Username</span>
                 </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="font-size:13px;color:var(--text-subtle);">Email</span>
+                    <span style="font-weight:700;">@Model.Email</span>
+                </div>
                 <div class="d-flex justify-content-between">
                     <span style="font-size:13px;color:var(--text-subtle);">Role</span>
-                    <span class="pill-badge pill-dark">@(Model.Role?.Name ?? "None")</span>
+                    <span class="pill-badge pill-dark">@Model.Role</span>
                 </div>
             </div>
 
             <form asp-action="Delete" method="post">
-                <input type="hidden" asp-for="UserId" />
+                <input type="hidden" asp-for="Id" />
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn-coral flex-grow-1 justify-content-center">
                         <i class="fa-solid fa-trash"></i> Yes, Delete

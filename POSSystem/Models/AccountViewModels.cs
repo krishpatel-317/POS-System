@@ -39,4 +39,25 @@ namespace POSSystem.Models
         [Compare("Password", ErrorMessage = "Passwords do not match")]
         public string ConfirmPassword { get; set; } = string.Empty;
     }
+
+    // ViewModel for Staff User Management (UserController)
+    public class StaffUserViewModel
+    {
+        public string Id { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Username is required")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Role is required")]
+        public string Role { get; set; } = "Cashier";
+
+        [DataType(DataType.Password)]
+        public string? Password { get; set; }
+
+        public int SalesCount { get; set; }
+    }
 }

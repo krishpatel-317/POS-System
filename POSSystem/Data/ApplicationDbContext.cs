@@ -15,11 +15,7 @@ namespace POSSystem.Data
         {
         }
 
-        // POS-specific tables (separate from Identity tables)
-        public DbSet<Role> POSRoles { get; set; }
-
-        public DbSet<User> POSUsers { get; set; }
-
+        // Domain tables
         public DbSet<Category> Categories { get; set; }
 
         public DbSet<Product> Products { get; set; }
@@ -39,14 +35,6 @@ namespace POSSystem.Data
             base.OnModelCreating(modelBuilder);
 
 
-            // Role 1 -> Many Users
-
-            modelBuilder.Entity<User>()
-                .HasOne(u => u.Role)
-                .WithMany(r => r.Users)
-                .HasForeignKey(u => u.RoleId);
-
-
             // Category 1 -> Many Products
 
             modelBuilder.Entity<Product>()
@@ -63,11 +51,11 @@ namespace POSSystem.Data
                 .HasForeignKey(s => s.CustomerId);
 
 
-            // User 1 -> Many Sales
+            // User 1 -> Many Sales (AspNetUsers IdentityUser)
 
             modelBuilder.Entity<Sale>()
                 .HasOne(s => s.User)
-                .WithMany(u => u.Sales)
+                .WithMany()
                 .HasForeignKey(s => s.UserId);
 
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
@@ -11,21 +12,19 @@ namespace POSSystem.Controllers
     public class HomeController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public HomeController(ApplicationDbContext context)
+        public HomeController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         public IActionResult Index()
         {
             ViewData["Title"] = "Dashboard";
 
-            string currentUsername = User.Identity?.Name ?? "User";
-            var currentPosUser = _context.POSUsers
-                .FirstOrDefault(u => u.Username == currentUsername || u.Name == currentUsername);
-
-            int currentUserId = currentPosUser?.UserId ?? 0;
+            string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
             bool isPrivileged = User.IsInRole("Admin") || User.IsInRole("Manager");
             ViewBag.IsPrivileged = isPrivileged;
 
@@ -38,21 +37,21 @@ namespace POSSystem.Controllers
 
             if (isPrivileged)
             {
-                // ADMIN / MANAGER VIEW: Store-wide financial metrics
-                var storeTodaySales = _context.Sales
-                    .Where(s => s.SaleDate >= today && s.SaleDate < today.AddDays(1))
-                    .ToList();
-                
-                var storeAllSales = _context.Sales.ToList();
-                decimal storeAllRevenue = storeAllSales.Sum(s => s.TotalAmount);
+                // ADMIN / MANAGER VIEW: Store-wide financial metrics computed directly in SQL Server
+                var todaySalesQuery = _context.Sales.Where(s => s.SaleDate >= today && s.SaleDate < today.AddDays(1));
+                int todayCount = todaySalesQuery.Count();
+                decimal todayRev = todayCount > 0 ? todaySalesQuery.Sum(s => s.TotalAmount) : 0m;
 
-                ViewBag.TodayRevenue = storeTodaySales.Sum(s => s.TotalAmount);
-                ViewBag.TodaySalesCount = storeTodaySales.Count;
-                ViewBag.TotalSales = storeAllSales.Count;
-                ViewBag.AllTimeRevenue = storeAllRevenue;
-                ViewBag.AverageOrderValue = storeAllSales.Count > 0 ? (storeAllRevenue / storeAllSales.Count) : 0;
+                int allCount = _context.Sales.Count();
+                decimal allRev = allCount > 0 ? _context.Sales.Sum(s => s.TotalAmount) : 0m;
 
-                // Recent sales from all store counters
+                ViewBag.TodayRevenue = todayRev;
+                ViewBag.TodaySalesCount = todayCount;
+                ViewBag.TotalSales = allCount;
+                ViewBag.AllTimeRevenue = allRev;
+                ViewBag.AverageOrderValue = allCount > 0 ? (allRev / allCount) : 0m;
+
+                // Recent sales from all store counters (top 5 only)
                 ViewBag.RecentSales = _context.Sales
                     .Include(s => s.Customer)
                     .Include(s => s.User)
@@ -63,24 +62,22 @@ namespace POSSystem.Controllers
             }
             else
             {
-                // CASHIER VIEW: Strictly their own counter stats
-                var myTodaySales = _context.Sales
-                    .Where(s => s.UserId == currentUserId && s.SaleDate >= today && s.SaleDate < today.AddDays(1))
-                    .ToList();
+                // CASHIER VIEW: Strictly their own counter stats computed directly in SQL Server
+                var myTodayQuery = _context.Sales.Where(s => s.UserId == currentUserId && s.SaleDate >= today && s.SaleDate < today.AddDays(1));
+                int myTodayCount = myTodayQuery.Count();
+                decimal myTodayRev = myTodayCount > 0 ? myTodayQuery.Sum(s => s.TotalAmount) : 0m;
 
-                var myAllSales = _context.Sales
-                    .Where(s => s.UserId == currentUserId)
-                    .ToList();
-                
-                decimal myAllRevenue = myAllSales.Sum(s => s.TotalAmount);
+                var myAllQuery = _context.Sales.Where(s => s.UserId == currentUserId);
+                int myAllCount = myAllQuery.Count();
+                decimal myAllRev = myAllCount > 0 ? myAllQuery.Sum(s => s.TotalAmount) : 0m;
 
-                ViewBag.TodayRevenue = myTodaySales.Sum(s => s.TotalAmount);
-                ViewBag.TodaySalesCount = myTodaySales.Count;
-                ViewBag.TotalSales = myAllSales.Count;
-                ViewBag.AllTimeRevenue = myAllRevenue;
-                ViewBag.AverageOrderValue = myAllSales.Count > 0 ? (myAllRevenue / myAllSales.Count) : 0;
+                ViewBag.TodayRevenue = myTodayRev;
+                ViewBag.TodaySalesCount = myTodayCount;
+                ViewBag.TotalSales = myAllCount;
+                ViewBag.AllTimeRevenue = myAllRev;
+                ViewBag.AverageOrderValue = myAllCount > 0 ? (myAllRev / myAllCount) : 0m;
 
-                // Recent sales from THIS cashier only
+                // Recent sales from THIS cashier only (top 5 only)
                 ViewBag.RecentSales = _context.Sales
                     .Where(s => s.UserId == currentUserId)
                     .Include(s => s.Customer)

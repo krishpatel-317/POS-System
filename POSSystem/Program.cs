@@ -56,32 +56,12 @@ namespace POSSystem
 
                     context.Database.Migrate();
 
-                    // Seed default POS roles in custom POSRoles table
-                    if (!context.POSRoles.Any())
-                    {
-                        foreach (var roleName in Enum.GetNames<UserRole>())
-                        {
-                            context.POSRoles.Add(new Role { Name = roleName });
-                        }
-                        context.SaveChanges();
-                    }
-
                     // Seed Identity roles in AspNetRoles table (Admin, Manager, Cashier)
                     foreach (var roleName in Enum.GetNames<UserRole>())
                     {
                         if (!roleManager.RoleExistsAsync(roleName).GetAwaiter().GetResult())
                         {
                             roleManager.CreateAsync(new IdentityRole(roleName)).GetAwaiter().GetResult();
-                        }
-                    }
-
-                    // Ensure krishpatel has the Admin role
-                    var adminUser = userManager.FindByNameAsync("krishpatel").GetAwaiter().GetResult();
-                    if (adminUser != null)
-                    {
-                        if (!userManager.IsInRoleAsync(adminUser, "Admin").GetAwaiter().GetResult())
-                        {
-                            userManager.AddToRoleAsync(adminUser, "Admin").GetAwaiter().GetResult();
                         }
                     }
                 }

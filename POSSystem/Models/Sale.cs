@@ -13,6 +13,7 @@ namespace POSSystem.Models
         public DateTime SaleDate { get; set; }
 
         [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }
 
         [ForeignKey("Customer")]
@@ -20,11 +21,11 @@ namespace POSSystem.Models
 
         public Customer? Customer { get; set; }
 
-        // User/Cashier Foreign Key
+        // User/Cashier Foreign Key (IdentityUser)
         [ForeignKey("User")]
-        public int UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
 
-        public User? User { get; set; }
+        public Microsoft.AspNetCore.Identity.IdentityUser? User { get; set; }
 
         // One Sale -> Many SaleItems
         public ICollection<SaleItem> SaleItems { get; set; }

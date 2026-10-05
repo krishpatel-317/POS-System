@@ -23,9 +23,11 @@ namespace POSSystem.Models
         public int Quantity { get; set; }
 
         [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal UnitPrice { get; set; }
 
         [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; }
     }
 }

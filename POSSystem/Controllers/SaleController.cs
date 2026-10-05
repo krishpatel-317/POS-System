@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -11,63 +12,31 @@ namespace POSSystem.Controllers
     public class SaleController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public SaleController(ApplicationDbContext context)
+        public SaleController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
-        }
-
-        // Helper: Ensure the logged-in Identity user exists in the POSUsers table for cashier tracking
-        private User GetOrCreateCurrentPOSUser()
-        {
-            string username = User.Identity?.Name ?? "User";
-            var posUser = _context.POSUsers.Include(u => u.Role)
-                .FirstOrDefault(u => u.Username == username || u.Name == username);
-
-            if (posUser == null)
-            {
-                // Ensure default Cashier role exists
-                var defaultRole = _context.POSRoles.FirstOrDefault(r => r.Name == "Cashier") 
-                                  ?? _context.POSRoles.FirstOrDefault();
-                
-                if (defaultRole == null)
-                {
-                    defaultRole = new Role { Name = "Cashier" };
-                    _context.POSRoles.Add(defaultRole);
-                    _context.SaveChanges();
-                }
-
-                posUser = new User
-                {
-                    Name = username,
-                    Username = username,
-                    Password = "IdentityManaged", // Auth handled by ASP.NET Core Identity
-                    RoleId = defaultRole.RoleId
-                };
-
-                _context.POSUsers.Add(posUser);
-                _context.SaveChanges();
-            }
-
-            return posUser;
+            _userManager = userManager;
         }
 
         // 1. READ & FILTER (Defaults to showing only the logged-in user's sales, with option to view all store sales)
-        public IActionResult Index(int? cashierId, string? paymentMethod, string? dateRange, string? search, bool showAllStoreSales = false)
+        public IActionResult Index(string? cashierId, string? paymentMethod, string? dateRange, string? search, bool showAllStoreSales = false)
         {
-            var currentPosUser = GetOrCreateCurrentPOSUser();
+            string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
+            string currentUserName = User.Identity?.Name ?? "User";
 
             // Strict Privilege Isolation: Cashiers can NEVER see other staff's sales
             bool isPrivileged = User.IsInRole("Admin") || User.IsInRole("Manager");
             if (!isPrivileged)
             {
-                cashierId = currentPosUser.UserId;
+                cashierId = currentUserId;
                 showAllStoreSales = false;
             }
-            else if (!showAllStoreSales && (!cashierId.HasValue || cashierId.Value == 0))
+            else if (!showAllStoreSales && string.IsNullOrEmpty(cashierId))
             {
                 // Admins/Managers default to their own sales, but can toggle to all store sales
-                cashierId = currentPosUser.UserId;
+                cashierId = currentUserId;
             }
 
             IQueryable<Sale> query = _context.Sales
@@ -78,9 +47,9 @@ namespace POSSystem.Controllers
                 .AsQueryable();
 
             // Filter by Cashier if specified (or default to current user)
-            if (cashierId.HasValue && cashierId.Value > 0)
+            if (!string.IsNullOrEmpty(cashierId))
             {
-                query = query.Where(s => s.UserId == cashierId.Value);
+                query = query.Where(s => s.UserId == cashierId);
             }
 
             // Filter by Payment Method
@@ -106,20 +75,21 @@ namespace POSSystem.Controllers
                 query = query.Where(s => s.SaleDate >= startOfMonth);
             }
 
-            // Search by Customer Name or Sale #
+            // Search by Customer Name, Cashier Username, or Sale #
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = search.Trim();
                 query = query.Where(s => 
                     (s.Customer != null && s.Customer.Name.Contains(search)) ||
-                    (s.User != null && s.User.Name.Contains(search)) ||
+                    (s.User != null && s.User.UserName != null && s.User.UserName.Contains(search)) ||
                     s.SaleId.ToString().Contains(search));
             }
 
             var sales = query.OrderByDescending(s => s.SaleDate).ToList();
 
             // Filter dropdown data
-            ViewBag.Cashiers = new SelectList(_context.POSUsers.OrderBy(u => u.Name).ToList(), "UserId", "Name", cashierId);
+            var staffUsers = _userManager.Users.OrderBy(u => u.UserName).ToList();
+            ViewBag.Cashiers = new SelectList(staffUsers, "Id", "UserName", cashierId);
             ViewBag.PaymentMethods = new SelectList(Enum.GetNames<PaymentMethodType>(), paymentMethod);
             
             // Pass active filter state to view
@@ -128,8 +98,8 @@ namespace POSSystem.Controllers
             ViewBag.SelectedDateRange = dateRange;
             ViewBag.SearchTerm = search;
             ViewBag.ShowAllStoreSales = showAllStoreSales;
-            ViewBag.CurrentPosUserId = currentPosUser.UserId;
-            ViewBag.CurrentUserName = currentPosUser.Name;
+            ViewBag.CurrentPosUserId = currentUserId;
+            ViewBag.CurrentUserName = currentUserName;
 
             // Summary metrics for current filtered view
             ViewBag.FilteredRevenue = sales.Sum(s => s.TotalAmount);
@@ -161,23 +131,12 @@ namespace POSSystem.Controllers
         // 3. CREATE (Show POS Cart Interface)
         public IActionResult Create()
         {
-            var currentPosUser = GetOrCreateCurrentPOSUser();
+            string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
+            string currentUserName = User.Identity?.Name ?? "User";
 
             ViewBag.Customers = new SelectList(_context.Customers.OrderBy(c => c.Name).ToList(), "CustomerId", "Name");
-            
-            // Staff members with role names, default selected to current logged-in user
-            var usersWithRoles = _context.POSUsers
-                .Include(u => u.Role)
-                .OrderBy(u => u.Name)
-                .Select(u => new {
-                    u.UserId,
-                    DisplayName = u.Name + (u.Role != null ? " (" + u.Role.Name + ")" : "")
-                })
-                .ToList();
-
-            ViewBag.Users = new SelectList(usersWithRoles, "UserId", "DisplayName", currentPosUser.UserId);
-            ViewBag.CurrentCashierId = currentPosUser.UserId;
-            ViewBag.CurrentCashierName = currentPosUser.Name;
+            ViewBag.CurrentCashierId = currentUserId;
+            ViewBag.CurrentCashierName = currentUserName;
 
             // Products available in stock
             ViewBag.AvailableProducts = _context.Products
@@ -193,7 +152,7 @@ namespace POSSystem.Controllers
 
         // 4. CREATE (Process Cart Checkout, Create Sale & Items, Update Stock)
         [HttpPost]
-        public IActionResult Create(int? customerId, int? userId, string paymentMethod, List<int> productIds, List<int> quantities, List<decimal> unitPrices)
+        public IActionResult Create(int? customerId, string? userId, string paymentMethod, List<int> productIds, List<int> quantities, List<decimal> unitPrices)
         {
             // Ensure cart is not empty
             if (productIds == null || productIds.Count == 0)
@@ -202,71 +161,113 @@ namespace POSSystem.Controllers
                 return RedirectToAction("Create");
             }
 
-            // Fallback to current logged-in user if userId wasn't supplied
-            if (!userId.HasValue || userId.Value == 0)
+            // Cashier is always the currently logged-in Identity user
+            string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
+            if (string.IsNullOrEmpty(currentUserId))
             {
-                var currentUser = GetOrCreateCurrentPOSUser();
-                userId = currentUser.UserId;
+                var user = _userManager.FindByNameAsync(User.Identity?.Name ?? "").GetAwaiter().GetResult();
+                currentUserId = user?.Id ?? string.Empty;
             }
 
-            // Calculate total bill amount
-            decimal grandTotal = 0;
-            for (int i = 0; i < productIds.Count; i++)
-            {
-                grandTotal += quantities[i] * unitPrices[i];
-            }
-
-            // 1. Save Sale Header
-            var sale = new Sale
-            {
-                SaleDate = DateTime.Now,
-                TotalAmount = grandTotal,
-                CustomerId = customerId == 0 ? null : customerId, // Walk-in support
-                UserId = userId.Value
-            };
-
-            _context.Sales.Add(sale);
-            _context.SaveChanges(); // Generates SaleId
-
-            // 2. Save SaleItems & Deduct Stock from Database
+            // 1. Group duplicate cart line items to validate total requested quantities accurately
+            var consolidatedItems = new Dictionary<int, (int Quantity, decimal UnitPrice)>();
             for (int i = 0; i < productIds.Count; i++)
             {
                 int pId = productIds[i];
                 int qty = quantities[i];
                 decimal price = unitPrices[i];
 
-                var saleItem = new SaleItem
+                if (qty <= 0) continue; // Ignore non-positive quantities
+
+                if (consolidatedItems.ContainsKey(pId))
                 {
-                    SaleId = sale.SaleId,
+                    var existing = consolidatedItems[pId];
+                    consolidatedItems[pId] = (existing.Quantity + qty, price);
+                }
+                else
+                {
+                    consolidatedItems[pId] = (qty, price);
+                }
+            }
+
+            if (consolidatedItems.Count == 0)
+            {
+                TempData["Error"] = "Cart contains no valid quantities.";
+                return RedirectToAction("Create");
+            }
+
+            // 2. Validate inventory stock for every product
+            foreach (var item in consolidatedItems)
+            {
+                var product = _context.Products.Find(item.Key);
+                if (product == null)
+                {
+                    TempData["Error"] = "One of the selected products was not found in the catalog.";
+                    return RedirectToAction("Create");
+                }
+                if (product.StockQuantity < item.Value.Quantity)
+                {
+                    TempData["Error"] = $"Cannot complete sale: '{product.Name}' has insufficient stock (Available: {product.StockQuantity}, Requested: {item.Value.Quantity}).";
+                    return RedirectToAction("Create");
+                }
+            }
+
+            // 3. Validate payment method against PaymentMethodType enum
+            string validatedPaymentMethod = PaymentMethodType.Cash.ToString();
+            if (!string.IsNullOrWhiteSpace(paymentMethod) && Enum.TryParse<PaymentMethodType>(paymentMethod, true, out var parsedMethod))
+            {
+                validatedPaymentMethod = parsedMethod.ToString();
+            }
+
+            // 4. Calculate total amount & build Sale with child SaleItems
+            decimal grandTotal = 0;
+            var sale = new Sale
+            {
+                SaleDate = DateTime.Now,
+                CustomerId = customerId == 0 ? null : customerId,
+                UserId = currentUserId,
+                SaleItems = new List<SaleItem>()
+            };
+
+            foreach (var item in consolidatedItems)
+            {
+                int pId = item.Key;
+                int qty = item.Value.Quantity;
+                decimal price = item.Value.UnitPrice;
+                decimal subtotal = qty * price;
+                grandTotal += subtotal;
+
+                sale.SaleItems.Add(new SaleItem
+                {
                     ProductId = pId,
                     Quantity = qty,
                     UnitPrice = price,
-                    TotalPrice = qty * price
-                };
-                _context.SaleItems.Add(saleItem);
+                    TotalPrice = subtotal
+                });
 
-                // Reduce inventory stock in Product table
+                // Deduct inventory stock
                 var product = _context.Products.Find(pId);
                 if (product != null)
                 {
                     product.StockQuantity -= qty;
-                    if (product.StockQuantity < 0) product.StockQuantity = 0;
                 }
             }
 
-            // 3. Save Payment Record
-            var payment = new Payment
+            sale.TotalAmount = grandTotal;
+
+            // 5. Attach Payment record
+            sale.Payment = new Payment
             {
                 Amount = grandTotal,
-                PaymentMethod = paymentMethod ?? PaymentMethodType.Cash.ToString(),
-                PaymentDate = DateTime.Now,
-                SaleId = sale.SaleId
+                PaymentMethod = validatedPaymentMethod,
+                PaymentDate = DateTime.Now
             };
-            _context.Payments.Add(payment);
 
+            // 6. Save entire graph in a single atomic database commit
+            _context.Sales.Add(sale);
             _context.SaveChanges();
 
-            TempData["Success"] = $"Sale #{sale.SaleId} recorded under your account! Billed ₹{grandTotal:N2}.";
+            TempData["Success"] = $"Sale #{sale.SaleId} recorded successfully! Billed ₹{grandTotal:N2}.";
             return RedirectToAction("Details", new { id = sale.SaleId });
         }
     }

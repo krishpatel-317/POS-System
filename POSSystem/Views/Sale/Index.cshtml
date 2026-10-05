@@ -1,12 +1,12 @@
 @model IEnumerable<POSSystem.Models.Sale>
 @{ 
     ViewData["Title"] = "Sales History"; 
-    int? selectedCashier = ViewBag.SelectedCashier as int?;
+    string? selectedCashier = ViewBag.SelectedCashier as string;
     string? selectedPayment = ViewBag.SelectedPaymentMethod as string;
     string? selectedDate = ViewBag.SelectedDateRange as string;
     string? search = ViewBag.SearchTerm as string;
     bool showAllStoreSales = ViewBag.ShowAllStoreSales is bool && (bool)ViewBag.ShowAllStoreSales;
-    int currentUserId = ViewBag.CurrentPosUserId is int ? (int)ViewBag.CurrentPosUserId : 0;
+    string currentUserId = ViewBag.CurrentPosUserId as string ?? "";
     string currentUserName = ViewBag.CurrentUserName as string ?? "You";
 }
 
@@ -131,7 +131,7 @@
                 <button type="submit" class="btn-dark-pill w-100 justify-content-center" style="padding:10px 14px;">
                     <i class="fa-solid fa-filter"></i> Apply
                 </button>
-                @if (selectedCashier.HasValue || !string.IsNullOrEmpty(selectedPayment) || !string.IsNullOrEmpty(selectedDate) || !string.IsNullOrEmpty(search) || showAllStoreSales)
+                @if (!string.IsNullOrEmpty(selectedCashier) || !string.IsNullOrEmpty(selectedPayment) || !string.IsNullOrEmpty(selectedDate) || !string.IsNullOrEmpty(search) || showAllStoreSales)
                 {
                     <a asp-action="Index" class="btn-light-pill justify-content-center" title="Reset to My Sales" style="padding:10px 14px;">
                         <i class="fa-solid fa-rotate-left"></i>
@@ -198,7 +198,7 @@
                             <td>
                                 <span class="pill-badge @(item.UserId == currentUserId ? "pill-coral" : "pill-gray")">
                                     <i class="fa-solid fa-user-tag"></i>
-                                    @(item.User?.Name ?? "Staff") @(item.UserId == currentUserId ? "(You)" : "")
+                                    @(item.User?.UserName ?? "Staff") @(item.UserId == currentUserId ? "(You)" : "")
                                 </span>
                             </td>
                             <td>

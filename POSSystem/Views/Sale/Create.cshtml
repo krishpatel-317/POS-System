@@ -87,13 +87,27 @@
                 <!-- Hidden Container for Array Form Fields -->
                 <div id="hiddenFieldsContainer"></div>
 
-                <!-- Staff Selection -->
-                <div class="mb-3">
-                    <label class="form-label">Served By (Staff) <span class="text-danger">*</span></label>
-                    <select name="userId" class="form-select" asp-items="ViewBag.Users" required>
-                        <option value="">-- Select Staff Member --</option>
-                    </select>
-                </div>
+                <!-- Staff / Cashier Attribution -->
+                @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Served By (Staff Counter) <span class="text-danger">*</span></label>
+                        <select name="userId" class="form-select" asp-items="ViewBag.Users" required>
+                        </select>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Cashier Counter</label>
+                        <div class="p-2 px-3 rounded-3" style="background:#faf9f6;border:1px solid var(--border-soft);font-weight:700;color:var(--text-title);display:flex;align-items:center;gap:8px;">
+                            <i class="fa-solid fa-user-check" style="color:var(--accent-coral);"></i>
+                            <span>@ViewBag.CurrentCashierName</span>
+                            <span class="pill-badge pill-coral ms-auto" style="font-size:11px;">Active Cashier</span>
+                        </div>
+                        <input type="hidden" name="userId" value="@ViewBag.CurrentCashierId" />
+                    </div>
+                }
 
                 <!-- Customer Selection -->
                 <div class="mb-3">

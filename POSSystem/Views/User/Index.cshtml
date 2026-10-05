@@ -1,4 +1,4 @@
-@model IEnumerable<POSSystem.Models.User>
+@model IEnumerable<POSSystem.Models.StaffUserViewModel>
 @{ 
     ViewData["Title"] = "Staff & Users"; 
 }
@@ -13,12 +13,9 @@
                 Cashiers, managers, and administrators assigned to system access roles.
             </p>
         </div>
-        @if (User.IsInRole("Admin"))
-        {
-            <a asp-action="Create" class="btn-coral">
-                <i class="fa-solid fa-plus"></i> Add User
-            </a>
-        }
+        <a asp-action="Create" class="btn-coral">
+            <i class="fa-solid fa-plus"></i> Add User
+        </a>
     </div>
 
     @if (!Model.Any())
@@ -38,13 +35,11 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Name</th>
                         <th>Username</th>
+                        <th>Email</th>
                         <th>Assigned Role</th>
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <th class="text-end">Actions</th>
-                        }
+                        <th>Sales Processed</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,29 +51,29 @@
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent-coral);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">
-                                        @(item.Name.Length > 0 ? item.Name.Substring(0, 1).ToUpper() : "U")
+                                        @(item.Username.Length > 0 ? item.Username.Substring(0, 1).ToUpper() : "U")
                                     </div>
-                                    <span style="font-weight:700;color:var(--text-title);">@item.Name</span>
+                                    <span style="font-weight:700;color:var(--text-title);">@item.Username</span>
                                 </div>
                             </td>
-                            <td><span style="color:var(--text-subtle);font-size:13px;">@@@item.Username</span></td>
+                            <td><span style="color:var(--text-subtle);font-size:13px;">@item.Email</span></td>
                             <td>
-                                <span class="pill-badge pill-dark">
-                                    <i class="fa-solid fa-shield-halved" style="color:var(--accent-coral);font-size:10px;"></i>
-                                    @(item.Role?.Name ?? "No Role")
+                                <span class="pill-badge @(item.Role == "Admin" ? "pill-coral" : item.Role == "Manager" ? "pill-green" : "pill-dark")">
+                                    <i class="fa-solid fa-shield-halved" style="font-size:10px;"></i>
+                                    @item.Role
                                 </span>
                             </td>
-                            @if (User.IsInRole("Admin"))
-                            {
-                                <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@item.UserId" class="btn-light-pill me-1">
-                                        <i class="fa-solid fa-pen-to-square"></i> Edit
-                                    </a>
-                                    <a asp-action="Delete" asp-route-id="@item.UserId" class="btn-light-pill text-danger">
-                                        <i class="fa-solid fa-trash"></i> Delete
-                                    </a>
-                                </td>
-                            }
+                            <td>
+                                <span class="pill-badge pill-gray">@item.SalesCount sales</span>
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn-light-pill me-1">
+                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn-light-pill text-danger">
+                                    <i class="fa-solid fa-trash"></i> Delete
+                                </a>
+                            </td>
                         </tr>
                         i++;
                     }
