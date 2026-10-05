@@ -37,13 +37,14 @@ namespace POSSystem.Controllers
 
             if (isPrivileged)
             {
-                // ADMIN / MANAGER VIEW: Store-wide financial metrics computed directly in SQL Server
-                var todaySalesQuery = _context.Sales.Where(s => s.SaleDate >= today && s.SaleDate < today.AddDays(1));
+                // ADMIN / MANAGER VIEW: Store-wide financial metrics computed directly in SQL Server (excluding voided)
+                var todaySalesQuery = _context.Sales.Where(s => s.Status != "Voided" && s.SaleDate >= today && s.SaleDate < today.AddDays(1));
                 int todayCount = todaySalesQuery.Count();
                 decimal todayRev = todayCount > 0 ? todaySalesQuery.Sum(s => s.TotalAmount) : 0m;
 
-                int allCount = _context.Sales.Count();
-                decimal allRev = allCount > 0 ? _context.Sales.Sum(s => s.TotalAmount) : 0m;
+                var allActiveSales = _context.Sales.Where(s => s.Status != "Voided");
+                int allCount = allActiveSales.Count();
+                decimal allRev = allCount > 0 ? allActiveSales.Sum(s => s.TotalAmount) : 0m;
 
                 ViewBag.TodayRevenue = todayRev;
                 ViewBag.TodaySalesCount = todayCount;
@@ -62,12 +63,12 @@ namespace POSSystem.Controllers
             }
             else
             {
-                // CASHIER VIEW: Strictly their own counter stats computed directly in SQL Server
-                var myTodayQuery = _context.Sales.Where(s => s.UserId == currentUserId && s.SaleDate >= today && s.SaleDate < today.AddDays(1));
+                // CASHIER VIEW: Strictly their own counter stats computed directly in SQL Server (excluding voided)
+                var myTodayQuery = _context.Sales.Where(s => s.Status != "Voided" && s.UserId == currentUserId && s.SaleDate >= today && s.SaleDate < today.AddDays(1));
                 int myTodayCount = myTodayQuery.Count();
                 decimal myTodayRev = myTodayCount > 0 ? myTodayQuery.Sum(s => s.TotalAmount) : 0m;
 
-                var myAllQuery = _context.Sales.Where(s => s.UserId == currentUserId);
+                var myAllQuery = _context.Sales.Where(s => s.Status != "Voided" && s.UserId == currentUserId);
                 int myAllCount = myAllQuery.Count();
                 decimal myAllRev = myAllCount > 0 ? myAllQuery.Sum(s => s.TotalAmount) : 0m;
 

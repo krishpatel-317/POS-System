@@ -257,10 +257,21 @@
                                     <div style="font-weight:700;font-size:14px;color:var(--text-title);">@prod.Name</div>
                                     <small style="color:var(--text-subtle);font-size:12px;">@(prod.Category?.Name ?? "General")</small>
                                 </div>
-                                <div class="text-end">
+                                <div class="text-end d-flex align-items-center gap-2">
                                     <span class="pill-badge @(prod.StockQuantity == 0 ? "pill-coral" : "pill-yellow")">
                                         @prod.StockQuantity left
                                     </span>
+                                    @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                                    {
+                                        <form asp-controller="Product" asp-action="Restock" method="post" style="margin:0;">
+                                            <input type="hidden" name="id" value="@prod.ProductId" />
+                                            <input type="hidden" name="additionalStock" value="10" />
+                                            <input type="hidden" name="returnUrl" value="/Home/Index" />
+                                            <button type="submit" class="btn btn-sm btn-light-pill px-2 py-1" style="font-size:11px;" title="Instantly restock +10 units">
+                                                <i class="fa-solid fa-plus text-success"></i> 10
+                                            </button>
+                                        </form>
+                                    }
                                 </div>
                             </div>
                         }

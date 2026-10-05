@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
 using POSSystem.Models;
+using System.Text;
 
 namespace POSSystem.Controllers
 {
@@ -101,15 +102,90 @@ namespace POSSystem.Controllers
             ViewBag.CurrentPosUserId = currentUserId;
             ViewBag.CurrentUserName = currentUserName;
 
-            // Summary metrics for current filtered view
-            ViewBag.FilteredRevenue = sales.Sum(s => s.TotalAmount);
+            // Summary metrics for current filtered view (Excluding voided sales from revenue)
+            var activeSales = sales.Where(s => s.Status != "Voided").ToList();
+            ViewBag.FilteredRevenue = activeSales.Sum(s => s.TotalAmount);
             ViewBag.FilteredCount = sales.Count;
-            ViewBag.FilteredAvgTicket = sales.Count > 0 ? (sales.Sum(s => s.TotalAmount) / sales.Count) : 0;
+            ViewBag.FilteredAvgTicket = activeSales.Count > 0 ? (activeSales.Sum(s => s.TotalAmount) / activeSales.Count) : 0;
 
             return View(sales);
         }
 
-        // 2. DETAILS (Show specific sale with printable receipt)
+        // 2. EXPORT TO CSV / EXCEL
+        [HttpGet]
+        public IActionResult ExportCsv(string? cashierId, string? paymentMethod, string? dateRange, string? search, bool showAllStoreSales = false)
+        {
+            string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
+            bool isPrivileged = User.IsInRole("Admin") || User.IsInRole("Manager");
+            if (!isPrivileged)
+            {
+                cashierId = currentUserId;
+                showAllStoreSales = false;
+            }
+            else if (!showAllStoreSales && string.IsNullOrEmpty(cashierId))
+            {
+                cashierId = currentUserId;
+            }
+
+            IQueryable<Sale> query = _context.Sales
+                .Include(s => s.Customer)
+                .Include(s => s.User)
+                .Include(s => s.Payment)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(cashierId))
+            {
+                query = query.Where(s => s.UserId == cashierId);
+            }
+            if (!string.IsNullOrEmpty(paymentMethod))
+            {
+                query = query.Where(s => s.Payment != null && s.Payment.PaymentMethod == paymentMethod);
+            }
+
+            DateTime today = DateTime.Today;
+            if (dateRange == "today")
+            {
+                query = query.Where(s => s.SaleDate >= today && s.SaleDate < today.AddDays(1));
+            }
+            else if (dateRange == "week")
+            {
+                DateTime startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                query = query.Where(s => s.SaleDate >= startOfWeek);
+            }
+            else if (dateRange == "month")
+            {
+                DateTime startOfMonth = new DateTime(today.Year, today.Month, 1);
+                query = query.Where(s => s.SaleDate >= startOfMonth);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+                query = query.Where(s => 
+                    (s.Customer != null && s.Customer.Name.Contains(search)) ||
+                    (s.User != null && s.User.UserName != null && s.User.UserName.Contains(search)) ||
+                    s.SaleId.ToString().Contains(search));
+            }
+
+            var sales = query.OrderByDescending(s => s.SaleDate).ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Sale ID,Date,Cashier,Customer,Payment Method,Subtotal,Discount %,Discount Amount,GST %,GST Amount,Total Amount,Status");
+
+            foreach (var s in sales)
+            {
+                string cashier = s.User?.UserName ?? "Staff";
+                string customer = s.Customer?.Name ?? "Walk-in";
+                string method = s.Payment?.PaymentMethod ?? "Cash";
+                sb.AppendLine($"{s.SaleId},{s.SaleDate:yyyy-MM-dd HH:mm},{cashier},\"{customer}\",{method},{s.Subtotal:F2},{s.DiscountPercentage:F2},{s.DiscountAmount:F2},{s.TaxPercentage:F2},{s.TaxAmount:F2},{s.TotalAmount:F2},{s.Status}");
+            }
+
+            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            string filename = $"Sales_Report_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+            return File(bytes, "text/csv", filename);
+        }
+
+        // 3. DETAILS (Show specific sale with printable receipt)
         public IActionResult Details(int id)
         {
             var sale = _context.Sales
@@ -118,6 +194,7 @@ namespace POSSystem.Controllers
                 .Include(s => s.Payment)
                 .Include(s => s.SaleItems)
                     .ThenInclude(si => si.Product)
+                        .ThenInclude(p => p!.Category)
                 .FirstOrDefault(s => s.SaleId == id);
 
             if (sale == null)
@@ -128,7 +205,44 @@ namespace POSSystem.Controllers
             return View(sale);
         }
 
-        // 3. CREATE (Show POS Cart Interface)
+        // 4. VOID / CANCEL SALE (Admin / Manager only - restores stock)
+        [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
+        public IActionResult Void(int id)
+        {
+            var sale = _context.Sales
+                .Include(s => s.SaleItems)
+                    .ThenInclude(si => si.Product)
+                .FirstOrDefault(s => s.SaleId == id);
+
+            if (sale == null)
+            {
+                return NotFound();
+            }
+
+            if (sale.Status == "Voided")
+            {
+                TempData["Error"] = $"Sale #{sale.SaleId} is already marked as voided.";
+                return RedirectToAction("Details", new { id = sale.SaleId });
+            }
+
+            // Return sold quantities back to inventory stock
+            foreach (var item in sale.SaleItems)
+            {
+                if (item.Product != null)
+                {
+                    item.Product.StockQuantity += item.Quantity;
+                }
+            }
+
+            sale.Status = "Voided";
+            _context.SaveChanges();
+
+            TempData["Success"] = $"Sale #{sale.SaleId} was successfully voided! Products have been returned to inventory.";
+            return RedirectToAction("Details", new { id = sale.SaleId });
+        }
+
+        // 5. CREATE (Show POS Cart Interface)
         public IActionResult Create()
         {
             string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
@@ -138,8 +252,9 @@ namespace POSSystem.Controllers
             ViewBag.CurrentCashierId = currentUserId;
             ViewBag.CurrentCashierName = currentUserName;
 
-            // Products available in stock
+            // Products available in stock (with Category & SKU for barcode scanning and GST calculation)
             ViewBag.AvailableProducts = _context.Products
+                .Include(p => p.Category)
                 .Where(p => p.StockQuantity > 0)
                 .OrderBy(p => p.Name)
                 .ToList();
@@ -150,9 +265,17 @@ namespace POSSystem.Controllers
             return View();
         }
 
-        // 4. CREATE (Process Cart Checkout, Create Sale & Items, Update Stock)
+        // 6. CREATE (Process Cart Checkout with Category-based GST Tax & Discount)
         [HttpPost]
-        public IActionResult Create(int? customerId, string? userId, string paymentMethod, List<int> productIds, List<int> quantities, List<decimal> unitPrices)
+        public IActionResult Create(
+            int? customerId, 
+            string? userId, 
+            string paymentMethod, 
+            decimal discountPercentage,
+            decimal? taxPercentage,
+            List<int> productIds, 
+            List<int> quantities, 
+            List<decimal> unitPrices)
         {
             // Ensure cart is not empty
             if (productIds == null || productIds.Count == 0)
@@ -196,11 +319,16 @@ namespace POSSystem.Controllers
                 return RedirectToAction("Create");
             }
 
-            // 2. Validate inventory stock for every product
+            // 2. Validate inventory stock for every product and fetch associated category
+            var productIdsList = consolidatedItems.Keys.ToList();
+            var productsInDb = _context.Products
+                .Include(p => p.Category)
+                .Where(p => productIdsList.Contains(p.ProductId))
+                .ToDictionary(p => p.ProductId);
+
             foreach (var item in consolidatedItems)
             {
-                var product = _context.Products.Find(item.Key);
-                if (product == null)
+                if (!productsInDb.TryGetValue(item.Key, out var product))
                 {
                     TempData["Error"] = "One of the selected products was not found in the catalog.";
                     return RedirectToAction("Create");
@@ -219,13 +347,20 @@ namespace POSSystem.Controllers
                 validatedPaymentMethod = parsedMethod.ToString();
             }
 
-            // 4. Calculate total amount & build Sale with child SaleItems
-            decimal grandTotal = 0;
+            // 4. Calculate Subtotal, Discount, Category-based GST, and Grand Total
+            if (discountPercentage < 0) discountPercentage = 0;
+            if (discountPercentage > 100) discountPercentage = 100;
+            decimal discountFactor = 1m - (discountPercentage / 100m);
+
+            decimal subtotal = 0m;
+            decimal totalTax = 0m;
+
             var sale = new Sale
             {
                 SaleDate = DateTime.Now,
                 CustomerId = customerId == 0 ? null : customerId,
                 UserId = currentUserId,
+                Status = "Completed",
                 SaleItems = new List<SaleItem>()
             };
 
@@ -234,25 +369,43 @@ namespace POSSystem.Controllers
                 int pId = item.Key;
                 int qty = item.Value.Quantity;
                 decimal price = item.Value.UnitPrice;
-                decimal subtotal = qty * price;
-                grandTotal += subtotal;
+                decimal itemSubtotal = qty * price;
+                subtotal += itemSubtotal;
+
+                var product = productsInDb[pId];
+                // Item tax calculated on discounted taxable amount according to category GST rate
+                decimal itemGstRate = product.Category?.GSTRate ?? 18m;
+                decimal discountedItemSubtotal = itemSubtotal * discountFactor;
+                decimal itemTax = Math.Round(discountedItemSubtotal * (itemGstRate / 100m), 2);
+                totalTax += itemTax;
 
                 sale.SaleItems.Add(new SaleItem
                 {
                     ProductId = pId,
                     Quantity = qty,
                     UnitPrice = price,
-                    TotalPrice = subtotal
+                    TotalPrice = itemSubtotal
                 });
 
                 // Deduct inventory stock
-                var product = _context.Products.Find(pId);
-                if (product != null)
-                {
-                    product.StockQuantity -= qty;
-                }
+                product.StockQuantity -= qty;
             }
 
+            decimal discountAmount = Math.Round(subtotal * (discountPercentage / 100m), 2);
+            decimal discountedSubtotal = subtotal - discountAmount;
+            if (discountedSubtotal < 0) discountedSubtotal = 0;
+
+            decimal effectiveTaxPct = (discountedSubtotal > 0) 
+                ? Math.Round((totalTax / discountedSubtotal) * 100m, 2) 
+                : 0m;
+
+            decimal grandTotal = discountedSubtotal + totalTax;
+
+            sale.Subtotal = subtotal;
+            sale.DiscountPercentage = discountPercentage;
+            sale.DiscountAmount = discountAmount;
+            sale.TaxPercentage = effectiveTaxPct;
+            sale.TaxAmount = totalTax;
             sale.TotalAmount = grandTotal;
 
             // 5. Attach Payment record

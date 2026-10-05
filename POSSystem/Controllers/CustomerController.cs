@@ -35,8 +35,36 @@ namespace POSSystem.Controllers
         {
             ModelState.Remove("Sales"); // Not provided in the form
 
+            string trimmedName = customer.Name?.Trim() ?? string.Empty;
+            string trimmedPhone = customer.Phone?.Trim() ?? string.Empty;
+            string trimmedEmail = customer.Email?.Trim() ?? string.Empty;
+
+            // 1. Phone number duplicate validation
+            if (!string.IsNullOrEmpty(trimmedPhone))
+            {
+                bool phoneExists = _context.Customers.Any(c => c.Phone.ToLower() == trimmedPhone.ToLower());
+                if (phoneExists)
+                {
+                    ModelState.AddModelError("Phone", $"A customer with phone number '{trimmedPhone}' already exists.");
+                }
+            }
+
+            // 2. Email duplicate validation
+            if (!string.IsNullOrEmpty(trimmedEmail))
+            {
+                bool emailExists = _context.Customers.Any(c => c.Email.ToLower() == trimmedEmail.ToLower());
+                if (emailExists)
+                {
+                    ModelState.AddModelError("Email", $"A customer with email '{trimmedEmail}' already exists.");
+                }
+            }
+
             if (ModelState.IsValid)
             {
+                customer.Name = trimmedName;
+                customer.Phone = trimmedPhone;
+                customer.Email = trimmedEmail;
+
                 _context.Customers.Add(customer);
                 _context.SaveChanges();
                 TempData["Success"] = "Customer added!";
@@ -62,14 +90,38 @@ namespace POSSystem.Controllers
         {
             ModelState.Remove("Sales");
 
+            string trimmedName = customer.Name?.Trim() ?? string.Empty;
+            string trimmedPhone = customer.Phone?.Trim() ?? string.Empty;
+            string trimmedEmail = customer.Email?.Trim() ?? string.Empty;
+
+            // 1. Phone number duplicate validation (excluding current customer)
+            if (!string.IsNullOrEmpty(trimmedPhone))
+            {
+                bool phoneExists = _context.Customers.Any(c => c.CustomerId != customer.CustomerId && c.Phone.ToLower() == trimmedPhone.ToLower());
+                if (phoneExists)
+                {
+                    ModelState.AddModelError("Phone", $"Another customer with phone number '{trimmedPhone}' already exists.");
+                }
+            }
+
+            // 2. Email duplicate validation (excluding current customer)
+            if (!string.IsNullOrEmpty(trimmedEmail))
+            {
+                bool emailExists = _context.Customers.Any(c => c.CustomerId != customer.CustomerId && c.Email.ToLower() == trimmedEmail.ToLower());
+                if (emailExists)
+                {
+                    ModelState.AddModelError("Email", $"Another customer with email '{trimmedEmail}' already exists.");
+                }
+            }
+
             if (ModelState.IsValid)
             {
                 var existing = _context.Customers.Find(customer.CustomerId);
                 if (existing == null) return NotFound();
 
-                existing.Name = customer.Name;
-                existing.Phone = customer.Phone;
-                existing.Email = customer.Email;
+                existing.Name = trimmedName;
+                existing.Phone = trimmedPhone;
+                existing.Email = trimmedEmail;
 
                 _context.SaveChanges();
                 TempData["Success"] = "Customer updated!";

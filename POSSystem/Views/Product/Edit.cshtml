@@ -25,6 +25,12 @@
                     <span asp-validation-for="Name" class="text-danger" style="font-size:12px;"></span>
                 </div>
 
+                <div class="mb-3">
+                    <label asp-for="SKU" class="form-label">Barcode / SKU <small class="text-muted" style="font-weight:400;">(Optional for hardware barcode scanner)</small></label>
+                    <input asp-for="SKU" class="form-control" placeholder="e.g. 8901030383120 or PRD-101" />
+                    <span asp-validation-for="SKU" class="text-danger" style="font-size:12px;"></span>
+                </div>
+
                 <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label asp-for="Price" class="form-label">Price (&#8377;) <span class="text-danger">*</span></label>

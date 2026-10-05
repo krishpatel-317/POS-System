@@ -69,6 +69,18 @@
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
+            <!-- Export CSV Button -->
+            <a asp-action="ExportCsv" 
+               asp-route-cashierId="@selectedCashier" 
+               asp-route-paymentMethod="@selectedPayment" 
+               asp-route-dateRange="@selectedDate" 
+               asp-route-search="@search" 
+               asp-route-showAllStoreSales="@showAllStoreSales" 
+               class="btn-light-pill" 
+               title="Export current filtered sales to CSV spreadsheet">
+                <i class="fa-solid fa-file-csv text-success"></i> Export CSV
+            </a>
+
             @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
             {
                 if (showAllStoreSales)
@@ -174,7 +186,8 @@
                         <th>Date &amp; Time</th>
                         <th>Customer</th>
                         <th>Cashier</th>
-                        <th>Payment Method</th>
+                        <th>Payment</th>
+                        <th>Status</th>
                         <th>Amount</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -222,7 +235,23 @@
                                 }
                             </td>
                             <td>
-                                <span style="font-weight:800;color:var(--text-title);font-size:15px;">&#8377;@item.TotalAmount.ToString("N2")</span>
+                                @if (item.Status == "Voided")
+                                {
+                                    <span class="pill-badge pill-coral" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-size:11px;">
+                                        <i class="fa-solid fa-ban"></i> Voided
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="pill-badge pill-green" style="font-size:11px;">
+                                        <i class="fa-solid fa-check"></i> Paid
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <span style="font-weight:800;font-size:15px;@(item.Status == "Voided" ? "text-decoration:line-through;color:var(--text-subtle);" : "color:var(--text-title);")">
+                                    &#8377;@item.TotalAmount.ToString("N2")
+                                </span>
                             </td>
                             <td class="text-end">
                                 <a asp-action="Details" asp-route-id="@item.SaleId" class="btn-light-pill">
@@ -236,4 +265,3 @@
         </div>
     }
 </div>
-

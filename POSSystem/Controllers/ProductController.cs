@@ -44,7 +44,7 @@ namespace POSSystem.Controllers
         [Authorize(Roles = "Admin,Manager")]
         public IActionResult Create()
         {
-            ViewBag.Categories = new SelectList(_context.Categories, "CategoryId", "Name");
+            ViewBag.Categories = GetCategorySelectList();
             return View();
         }
 
@@ -56,8 +56,33 @@ namespace POSSystem.Controllers
             ModelState.Remove("Category");
             ModelState.Remove("SaleItems");
 
+            string trimmedName = product.Name?.Trim() ?? string.Empty;
+            string trimmedSku = product.SKU?.Trim() ?? string.Empty;
+
+            // 1. Case-insensitive duplicate product name validation
+            if (!string.IsNullOrEmpty(trimmedName))
+            {
+                bool nameExists = await _context.Products.AnyAsync(p => p.Name.ToLower() == trimmedName.ToLower());
+                if (nameExists)
+                {
+                    ModelState.AddModelError("Name", $"A product named '{trimmedName}' already exists (names are case-insensitive).");
+                }
+            }
+
+            // 2. Barcode / SKU uniqueness validation (if SKU is provided)
+            if (!string.IsNullOrEmpty(trimmedSku))
+            {
+                bool skuExists = await _context.Products.AnyAsync(p => p.SKU.ToLower() == trimmedSku.ToLower());
+                if (skuExists)
+                {
+                    ModelState.AddModelError("SKU", $"Barcode / SKU '{trimmedSku}' is already assigned to another product.");
+                }
+            }
+
             if (ModelState.IsValid)
             {
+                product.Name = trimmedName;
+                product.SKU = trimmedSku;
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
                 
@@ -65,7 +90,7 @@ namespace POSSystem.Controllers
                 return RedirectToAction("Index");
             }
 
-            ViewBag.Categories = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
+            ViewBag.Categories = GetCategorySelectList(product.CategoryId);
             return View(product);
         }
 
@@ -76,7 +101,7 @@ namespace POSSystem.Controllers
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
 
-            ViewBag.Categories = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
+            ViewBag.Categories = GetCategorySelectList(product.CategoryId);
             return View(product);
         }
 
@@ -88,17 +113,63 @@ namespace POSSystem.Controllers
             ModelState.Remove("Category");
             ModelState.Remove("SaleItems");
 
+            string trimmedName = product.Name?.Trim() ?? string.Empty;
+            string trimmedSku = product.SKU?.Trim() ?? string.Empty;
+
+            // 1. Case-insensitive duplicate product name validation (excluding current product)
+            if (!string.IsNullOrEmpty(trimmedName))
+            {
+                bool nameExists = await _context.Products.AnyAsync(p => p.ProductId != product.ProductId && p.Name.ToLower() == trimmedName.ToLower());
+                if (nameExists)
+                {
+                    ModelState.AddModelError("Name", $"Another product named '{trimmedName}' already exists (names are case-insensitive).");
+                }
+            }
+
+            // 2. Barcode / SKU uniqueness validation (excluding current product)
+            if (!string.IsNullOrEmpty(trimmedSku))
+            {
+                bool skuExists = await _context.Products.AnyAsync(p => p.ProductId != product.ProductId && p.SKU.ToLower() == trimmedSku.ToLower());
+                if (skuExists)
+                {
+                    ModelState.AddModelError("SKU", $"Barcode / SKU '{trimmedSku}' is already assigned to another product.");
+                }
+            }
+
             if (ModelState.IsValid)
             {
-                _context.Products.Update(product);
+                var existing = await _context.Products.FindAsync(product.ProductId);
+                if (existing == null) return NotFound();
+
+                existing.Name = trimmedName;
+                existing.SKU = trimmedSku;
+                existing.Price = product.Price;
+                existing.StockQuantity = product.StockQuantity;
+                existing.CategoryId = product.CategoryId;
+
                 await _context.SaveChangesAsync();
                 
-                TempData["Success"] = $"Product '{product.Name}' updated!";
+                TempData["Success"] = $"Product '{existing.Name}' updated!";
                 return RedirectToAction("Index");
             }
 
-            ViewBag.Categories = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
+            ViewBag.Categories = GetCategorySelectList(product.CategoryId);
             return View(product);
+        }
+
+        // Helper to populate category dropdown with GST rate indicator
+        private SelectList GetCategorySelectList(int? selectedId = null)
+        {
+            var categories = _context.Categories
+                .OrderBy(c => c.Name)
+                .Select(c => new
+                {
+                    c.CategoryId,
+                    DisplayName = $"{c.Name} ({c.GSTRate:0.##}% GST)"
+                })
+                .ToList();
+
+            return new SelectList(categories, "CategoryId", "DisplayName", selectedId);
         }
 
         // 6. DELETE (PRIVILEGE: Only Admin and Manager can delete products)
@@ -130,6 +201,33 @@ namespace POSSystem.Controllers
             await _context.SaveChangesAsync();
             
             TempData["Success"] = $"Product '{product.Name}' deleted from inventory.";
+            return RedirectToAction("Index");
+        }
+
+        // 8. RESTOCK (Quick Reorder / Stock In - Admin & Manager)
+        [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> Restock(int id, int additionalStock, string? returnUrl)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            if (additionalStock <= 0)
+            {
+                TempData["Error"] = "Restock quantity must be at least 1 unit.";
+            }
+            else
+            {
+                product.StockQuantity += additionalStock;
+                await _context.SaveChangesAsync();
+                TempData["Success"] = $"Successfully restocked +{additionalStock} units for '{product.Name}'. Current stock: {product.StockQuantity}.";
+            }
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+
             return RedirectToAction("Index");
         }
     }

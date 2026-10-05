@@ -83,11 +83,41 @@ namespace POSSystem.Data
                 .HasForeignKey<Payment>(p => p.SaleId);
 
             // Precision for all currency decimals
+            modelBuilder.Entity<Category>().Property(c => c.GSTRate).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Product>().Property(p => p.Price).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Sale>().Property(s => s.Subtotal).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Sale>().Property(s => s.DiscountPercentage).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Sale>().Property(s => s.DiscountAmount).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Sale>().Property(s => s.TaxPercentage).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Sale>().Property(s => s.TaxAmount).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Sale>().Property(s => s.TotalAmount).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<SaleItem>().Property(si => si.UnitPrice).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<SaleItem>().Property(si => si.TotalPrice).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Payment>().Property(p => p.Amount).HasColumnType("decimal(18,2)");
+
+            // Unique Constraints / Indexes to prevent duplicates at the database level
+            modelBuilder.Entity<Category>()
+                .HasIndex(c => c.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<Product>()
+                .HasIndex(p => p.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<Product>()
+                .HasIndex(p => p.SKU)
+                .IsUnique()
+                .HasFilter("[SKU] IS NOT NULL AND [SKU] <> ''");
+
+            modelBuilder.Entity<Customer>()
+                .HasIndex(c => c.Phone)
+                .IsUnique()
+                .HasFilter("[Phone] IS NOT NULL AND [Phone] <> ''");
+
+            modelBuilder.Entity<Customer>()
+                .HasIndex(c => c.Email)
+                .IsUnique()
+                .HasFilter("[Email] IS NOT NULL AND [Email] <> ''");
         }
     }
 }

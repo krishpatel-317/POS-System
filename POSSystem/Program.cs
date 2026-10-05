@@ -25,6 +25,9 @@ namespace POSSystem
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequiredLength = 4;
 
+                // Ensure unique emails across all staff accounts
+                options.User.RequireUniqueEmail = true;
+
                 // No email confirmation required
                 options.SignIn.RequireConfirmedAccount = false;
             })

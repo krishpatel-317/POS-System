@@ -37,8 +37,19 @@ namespace POSSystem.Controllers
         {
             ModelState.Remove("Products");
 
+            string trimmedName = category.Name?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(trimmedName))
+            {
+                bool nameExists = await _context.Categories.AnyAsync(c => c.Name.ToLower() == trimmedName.ToLower());
+                if (nameExists)
+                {
+                    ModelState.AddModelError("Name", $"A category named '{trimmedName}' already exists (names are case-insensitive).");
+                }
+            }
+
             if (ModelState.IsValid)
             {
+                category.Name = trimmedName;
                 _context.Categories.Add(category);
                 await _context.SaveChangesAsync();
                 
@@ -66,12 +77,23 @@ namespace POSSystem.Controllers
         {
             ModelState.Remove("Products");
 
+            string trimmedName = category.Name?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(trimmedName))
+            {
+                bool nameExists = await _context.Categories.AnyAsync(c => c.CategoryId != category.CategoryId && c.Name.ToLower() == trimmedName.ToLower());
+                if (nameExists)
+                {
+                    ModelState.AddModelError("Name", $"Another category named '{trimmedName}' already exists (names are case-insensitive).");
+                }
+            }
+
             if (ModelState.IsValid)
             {
                 var existing = await _context.Categories.FindAsync(category.CategoryId);
                 if (existing == null) return NotFound();
 
-                existing.Name = category.Name;
+                existing.Name = trimmedName;
+                existing.GSTRate = category.GSTRate;
                 await _context.SaveChangesAsync();
                 
                 TempData["Success"] = "Category updated!";

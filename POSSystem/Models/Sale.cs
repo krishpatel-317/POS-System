@@ -14,7 +14,27 @@ namespace POSSystem.Models
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
+        public decimal Subtotal { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DiscountPercentage { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DiscountAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TaxPercentage { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TaxAmount { get; set; }
+
+        [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }
+
+        // Sale Status: "Completed" or "Voided"
+        [Required]
+        public string Status { get; set; } = "Completed";
 
         [ForeignKey("Customer")]
         public int? CustomerId { get; set; }

@@ -64,8 +64,11 @@ namespace POSSystem.Controllers
 
             if (ModelState.IsValid)
             {
+                string trimmedUsername = model.Username?.Trim() ?? string.Empty;
+                string trimmedEmail = model.Email?.Trim() ?? string.Empty;
+
                 // Check if username already exists in Identity
-                var existingIdentity = await _userManager.FindByNameAsync(model.Username);
+                var existingIdentity = await _userManager.FindByNameAsync(trimmedUsername);
                 if (existingIdentity != null)
                 {
                     ModelState.AddModelError("Username", "A staff user with this username already exists.");
@@ -73,10 +76,22 @@ namespace POSSystem.Controllers
                     return View(model);
                 }
 
+                // Check if email already exists in Identity
+                if (!string.IsNullOrWhiteSpace(trimmedEmail))
+                {
+                    var existingEmail = await _userManager.FindByEmailAsync(trimmedEmail);
+                    if (existingEmail != null)
+                    {
+                        ModelState.AddModelError("Email", "A staff user with this email address already exists.");
+                        ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                        return View(model);
+                    }
+                }
+
                 var identityUser = new IdentityUser
                 {
-                    UserName = model.Username,
-                    Email = string.IsNullOrWhiteSpace(model.Email) ? $"{model.Username}@posstore.local" : model.Email
+                    UserName = trimmedUsername,
+                    Email = string.IsNullOrWhiteSpace(trimmedEmail) ? $"{trimmedUsername}@posstore.local" : trimmedEmail
                 };
 
                 var createResult = await _userManager.CreateAsync(identityUser, model.Password!);
@@ -133,8 +148,32 @@ namespace POSSystem.Controllers
 
             if (ModelState.IsValid)
             {
-                user.UserName = model.Username;
-                user.Email = model.Email;
+                string trimmedUsername = model.Username?.Trim() ?? string.Empty;
+                string trimmedEmail = model.Email?.Trim() ?? string.Empty;
+
+                // Check if username is taken by another user
+                var existingUser = await _userManager.FindByNameAsync(trimmedUsername);
+                if (existingUser != null && existingUser.Id != user.Id)
+                {
+                    ModelState.AddModelError("Username", "Another staff user with this username already exists.");
+                    ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                    return View(model);
+                }
+
+                // Check if email is taken by another user
+                if (!string.IsNullOrWhiteSpace(trimmedEmail))
+                {
+                    var existingEmail = await _userManager.FindByEmailAsync(trimmedEmail);
+                    if (existingEmail != null && existingEmail.Id != user.Id)
+                    {
+                        ModelState.AddModelError("Email", "Another staff user with this email address already exists.");
+                        ViewBag.Roles = new SelectList(Enum.GetNames<UserRole>(), model.Role);
+                        return View(model);
+                    }
+                }
+
+                user.UserName = trimmedUsername;
+                user.Email = trimmedEmail;
                 var updateResult = await _userManager.UpdateAsync(user);
 
                 if (!updateResult.Succeeded)
