@@ -22,22 +22,19 @@ namespace POSSystem.Controllers
         }
 
         // 1. READ & FILTER (Defaults to showing only the logged-in user's sales, with option to view all store sales)
-        public IActionResult Index(string? cashierId, string? paymentMethod, string? dateRange, string? search, bool showAllStoreSales = false)
+        public IActionResult Index(string? cashierId, string? paymentMethod, string? dateRange, string? search)
         {
             string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
             string currentUserName = User.Identity?.Name ?? "User";
 
-            // Strict Privilege Isolation: Cashiers can NEVER see other staff's sales
+            // Role Isolation: Cashiers can ONLY see their own sales. Admins see all store sales by default.
             bool isPrivileged = User.IsInRole("Admin");
+            bool showAllStoreSales = isPrivileged && string.IsNullOrEmpty(cashierId);
+
             if (!isPrivileged)
             {
                 cashierId = currentUserId;
                 showAllStoreSales = false;
-            }
-            else if (!showAllStoreSales && string.IsNullOrEmpty(cashierId))
-            {
-                // Admins/Managers default to their own sales, but can toggle to all store sales
-                cashierId = currentUserId;
             }
 
             IQueryable<Sale> query = _context.Sales
@@ -111,22 +108,11 @@ namespace POSSystem.Controllers
             return View(sales);
         }
 
-        // 2. EXPORT TO CSV / EXCEL
+        // 2. EXPORT TO CSV / EXCEL (Admin only)
         [HttpGet]
-        public IActionResult ExportCsv(string? cashierId, string? paymentMethod, string? dateRange, string? search, bool showAllStoreSales = false)
+        [Authorize(Roles = "Admin")]
+        public IActionResult ExportCsv(string? cashierId, string? paymentMethod, string? dateRange, string? search)
         {
-            string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
-            bool isPrivileged = User.IsInRole("Admin");
-            if (!isPrivileged)
-            {
-                cashierId = currentUserId;
-                showAllStoreSales = false;
-            }
-            else if (!showAllStoreSales && string.IsNullOrEmpty(cashierId))
-            {
-                cashierId = currentUserId;
-            }
-
             IQueryable<Sale> query = _context.Sales
                 .Include(s => s.Customer)
                 .Include(s => s.User)

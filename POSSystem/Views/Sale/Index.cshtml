@@ -5,7 +5,6 @@
     string? selectedPayment = ViewBag.SelectedPaymentMethod as string;
     string? selectedDate = ViewBag.SelectedDateRange as string;
     string? search = ViewBag.SearchTerm as string;
-    bool showAllStoreSales = ViewBag.ShowAllStoreSales is bool && (bool)ViewBag.ShowAllStoreSales;
     string currentUserId = ViewBag.CurrentPosUserId as string ?? "";
     string currentUserName = ViewBag.CurrentUserName as string ?? "You";
 }
@@ -16,7 +15,7 @@
         <div class="card-theme mb-0 p-3 d-flex align-items-center justify-content-between">
             <div>
                 <div style="font-size:12px;font-weight:700;color:var(--text-subtle);text-transform:uppercase;letter-spacing:0.5px;">
-                    @(showAllStoreSales ? "Store Revenue" : "My Sales Revenue")
+                    @(User.IsInRole("Admin") ? "Store Revenue" : "My Sales Revenue")
                 </div>
                 <div style="font-size:24px;font-weight:800;color:var(--text-title);margin-top:2px;">
                     &#8377;@(((decimal)(ViewBag.FilteredRevenue ?? 0)).ToString("N2"))
@@ -31,7 +30,7 @@
         <div class="card-theme mb-0 p-3 d-flex align-items-center justify-content-between">
             <div>
                 <div style="font-size:12px;font-weight:700;color:var(--text-subtle);text-transform:uppercase;letter-spacing:0.5px;">
-                    @(showAllStoreSales ? "Total Orders" : "My Orders")
+                    @(User.IsInRole("Admin") ? "Total Orders" : "My Orders")
                 </div>
                 <div style="font-size:24px;font-weight:800;color:var(--text-title);margin-top:2px;">
                     @(ViewBag.FilteredCount ?? 0) <span style="font-size:14px;font-weight:500;color:var(--text-subtle);">orders</span>
@@ -62,10 +61,10 @@
         <div>
             <h5 class="card-theme-title">
                 <i class="fa-solid fa-receipt" style="color:var(--accent-coral);"></i> 
-                @(showAllStoreSales ? "All Store Transactions" : $"My Sales ({currentUserName})")
+                @(User.IsInRole("Admin") ? "Store Sales History & Audit" : $"My Sales ({currentUserName})")
             </h5>
             <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">
-                @(showAllStoreSales ? "Viewing all receipts across all staff members." : "Viewing sales recorded by your account.")
+                @(User.IsInRole("Admin") ? "Viewing customer receipts across all store registers and staff." : "Viewing sales recorded by your account.")
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -77,28 +76,12 @@
                    asp-route-paymentMethod="@selectedPayment" 
                    asp-route-dateRange="@selectedDate" 
                    asp-route-search="@search" 
-                   asp-route-showAllStoreSales="@showAllStoreSales" 
                    class="btn-light-pill" 
                    title="Export current filtered sales to CSV spreadsheet">
                     <i class="fa-solid fa-file-csv text-success"></i> Export CSV
                 </a>
             }
 
-            @if (User.IsInRole("Admin"))
-            {
-                if (showAllStoreSales)
-                {
-                    <a asp-action="Index" class="btn-dark-pill">
-                        <i class="fa-solid fa-user"></i> Switch to My Sales
-                    </a>
-                }
-                else
-                {
-                    <a asp-action="Index" asp-route-showAllStoreSales="true" class="btn-light-pill">
-                        <i class="fa-solid fa-users"></i> View All Store Sales
-                    </a>
-                }
-            }
             @if (!User.IsInRole("Admin"))
             {
                 <a asp-action="Create" class="btn-coral">
@@ -110,7 +93,6 @@
 
     <!-- ═══ Filter Toolbar ═══ -->
     <form method="get" asp-action="Index" class="mb-4">
-        <input type="hidden" name="showAllStoreSales" value="@(showAllStoreSales ? "true" : "false")" />
         <div class="row g-2 align-items-center">
             <div class="@(User.IsInRole("Admin") ? "col-lg-3 col-md-4" : "col-lg-4 col-md-5")">
                 <div class="input-group">
@@ -125,7 +107,7 @@
             {
                 <div class="col-lg-2 col-md-3">
                     <select name="cashierId" asp-items="ViewBag.Cashiers" class="form-select">
-                        <option value="">@(showAllStoreSales ? "All Cashiers" : "My Account Only")</option>
+                        <option value="">All Cashiers</option>
                     </select>
                 </div>
             }
@@ -149,9 +131,9 @@
                 <button type="submit" class="btn-dark-pill w-100 justify-content-center" style="padding:10px 14px;">
                     <i class="fa-solid fa-filter"></i> Apply
                 </button>
-                @if (!string.IsNullOrEmpty(selectedCashier) || !string.IsNullOrEmpty(selectedPayment) || !string.IsNullOrEmpty(selectedDate) || !string.IsNullOrEmpty(search) || showAllStoreSales)
+                @if (!string.IsNullOrEmpty(selectedCashier) || !string.IsNullOrEmpty(selectedPayment) || !string.IsNullOrEmpty(selectedDate) || !string.IsNullOrEmpty(search))
                 {
-                    <a asp-action="Index" class="btn-light-pill justify-content-center" title="Reset to My Sales" style="padding:10px 14px;">
+                    <a asp-action="Index" class="btn-light-pill justify-content-center" title="Reset Filters" style="padding:10px 14px;">
                         <i class="fa-solid fa-rotate-left"></i>
                     </a>
                 }
@@ -165,9 +147,11 @@
             <div style="width:54px;height:54px;background:var(--pill-gray);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--text-subtle);">
                 <i class="fa-solid fa-receipt fa-lg"></i>
             </div>
-            <div style="font-weight:700;font-size:15px;color:var(--text-title);">No sales recorded under this account yet</div>
+            <div style="font-weight:700;font-size:15px;color:var(--text-title);">
+                @(User.IsInRole("Admin") ? "No store transactions found" : "No sales recorded under this account yet")
+            </div>
             <p style="font-size:13px;color:var(--text-subtle);margin-top:4px;">
-                @(showAllStoreSales ? "No transactions found in the database." : "You haven't processed any sales yet. Click 'New Sale' to record an order under your account!")
+                @(User.IsInRole("Admin") ? "No customer receipts matched your current filter criteria." : "You haven't processed any sales yet. Click 'New Sale' to record an order under your account!")
             </p>
             <div class="d-flex justify-content-center gap-2 mt-3">
                 @if (!User.IsInRole("Admin"))
@@ -176,10 +160,10 @@
                         <i class="fa-solid fa-cart-plus"></i> Record Your First Sale
                     </a>
                 }
-                @if (User.IsInRole("Admin") && !showAllStoreSales)
+                else
                 {
-                    <a asp-action="Index" asp-route-showAllStoreSales="true" class="btn-light-pill">
-                        <i class="fa-solid fa-users"></i> View Other Staff Sales
+                    <a asp-action="Index" class="btn-light-pill">
+                        <i class="fa-solid fa-rotate-left"></i> Clear Filters
                     </a>
                 }
             </div>
