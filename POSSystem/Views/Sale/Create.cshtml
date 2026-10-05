@@ -114,10 +114,15 @@
                     </div>
                 </div>
 
-                <!-- Customer Selection -->
+                <!-- Customer Selection with Quick Add -->
                 <div class="mb-3">
-                    <label class="form-label">Customer (Optional)</label>
-                    <select name="customerId" class="form-select" asp-items="ViewBag.Customers">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0">Customer (Optional)</label>
+                        <button type="button" class="btn btn-sm btn-light-pill text-primary px-2 py-0" data-bs-toggle="modal" data-bs-target="#quickCustomerModal" style="font-size:11px;font-weight:700;">
+                            <i class="fa-solid fa-user-plus me-1"></i> + Quick Add
+                        </button>
+                    </div>
+                    <select name="customerId" id="customerSelect" class="form-select" asp-items="ViewBag.Customers">
                         <option value="0">-- Walk-in Customer --</option>
                     </select>
                 </div>
@@ -183,8 +188,92 @@
     </div>
 </div>
 
+<!-- Quick Customer Registration Modal -->
+<div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-labelledby="quickCustomerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:24px;border:none;box-shadow:var(--shadow-card);padding:10px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="quickCustomerModalLabel" style="font-weight:800;color:var(--text-title);">
+                    <i class="fa-solid fa-user-plus text-primary me-2"></i> Quick Add Customer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="quickCustomerAlert" class="alert alert-danger py-2" style="font-size:12px;display:none;"></div>
+                <div class="mb-3">
+                    <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustName" class="form-control" placeholder="e.g. Rahul Sharma" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustPhone" class="form-control" placeholder="e.g. +91 98765 43210" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Email Address (Optional)</label>
+                    <input type="email" id="quickCustEmail" class="form-control" placeholder="e.g. rahul@example.com" />
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn-light-pill" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnSaveQuickCustomer" class="btn-coral">
+                    <i class="fa-solid fa-check me-1"></i> Register &amp; Select
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
+    // Quick Add Customer AJAX Handler
+    $('#btnSaveQuickCustomer').click(function () {
+        const name = $('#quickCustName').val().trim();
+        const phone = $('#quickCustPhone').val().trim();
+        const email = $('#quickCustEmail').val().trim();
+        const alertBox = $('#quickCustomerAlert');
+
+        alertBox.hide();
+
+        if (!name) {
+            alertBox.text('Please enter customer full name.').show();
+            return;
+        }
+        if (!phone) {
+            alertBox.text('Please enter customer phone number.').show();
+            return;
+        }
+
+        const btn = $(this);
+        btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> Saving...');
+
+        $.ajax({
+            url: '/Customer/QuickCreate',
+            type: 'POST',
+            data: { name: name, phone: phone, email: email },
+            success: function (res) {
+                btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Register &amp; Select');
+                if (res.success) {
+                    // Add new option to dropdown and select it
+                    const newOption = new Option(res.displayName, res.customerId, true, true);
+                    $('#customerSelect').append(newOption).trigger('change');
+
+                    // Reset form and close modal
+                    $('#quickCustName').val('');
+                    $('#quickCustPhone').val('');
+                    $('#quickCustEmail').val('');
+                    const modalEl = document.getElementById('quickCustomerModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                } else {
+                    alertBox.text(res.message || 'Failed to add customer.').show();
+                }
+            },
+            error: function () {
+                btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Register &amp; Select');
+                alertBox.text('Server error occurred while registering customer.').show();
+            }
+        });
+    });
     // In-memory catalog for instant barcode/SKU lookup with category & GST rate
     const catalog = [
         @foreach (var p in availableProducts)

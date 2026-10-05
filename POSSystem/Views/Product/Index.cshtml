@@ -140,14 +140,6 @@
                             @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
                             {
                                 <td class="text-end">
-                                    <form asp-action="Restock" method="post" class="d-inline" style="margin:0;">
-                                        <input type="hidden" name="id" value="@p.ProductId" />
-                                        <input type="hidden" name="additionalStock" value="10" />
-                                        <input type="hidden" name="returnUrl" value="/Product/Index" />
-                                        <button type="submit" class="btn-light-pill text-success me-1" title="Instantly restock +10 units">
-                                            <i class="fa-solid fa-plus"></i> 10
-                                        </button>
-                                    </form>
                                     <a asp-action="Edit" asp-route-id="@p.ProductId" class="btn-light-pill me-1">
                                         <i class="fa-solid fa-pen-to-square"></i> Edit
                                     </a>

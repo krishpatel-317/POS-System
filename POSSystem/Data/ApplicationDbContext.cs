@@ -102,12 +102,13 @@ namespace POSSystem.Data
 
             modelBuilder.Entity<Product>()
                 .HasIndex(p => p.Name)
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("[IsArchived] = 0");
 
             modelBuilder.Entity<Product>()
                 .HasIndex(p => p.SKU)
                 .IsUnique()
-                .HasFilter("[SKU] IS NOT NULL AND [SKU] <> ''");
+                .HasFilter("[IsArchived] = 0 AND [SKU] IS NOT NULL AND [SKU] <> ''");
 
             modelBuilder.Entity<Customer>()
                 .HasIndex(c => c.Phone)

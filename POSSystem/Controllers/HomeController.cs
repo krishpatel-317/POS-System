@@ -29,7 +29,7 @@ namespace POSSystem.Controllers
             ViewBag.IsPrivileged = isPrivileged;
 
             // 1. Basic Counts
-            ViewBag.TotalProducts = _context.Products.Count();
+            ViewBag.TotalProducts = _context.Products.Count(p => !p.IsArchived);
             ViewBag.TotalCategories = _context.Categories.Count();
             ViewBag.TotalCustomers = _context.Customers.Count();
 
@@ -92,7 +92,7 @@ namespace POSSystem.Controllers
             // Low Stock Alert Products (Stock <= 5)
             ViewBag.LowStockProducts = _context.Products
                 .Include(p => p.Category)
-                .Where(p => p.StockQuantity <= 5)
+                .Where(p => !p.IsArchived && p.StockQuantity <= 5)
                 .OrderBy(p => p.StockQuantity)
                 .Take(5)
                 .ToList();

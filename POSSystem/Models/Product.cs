@@ -33,5 +33,8 @@ namespace POSSystem.Models
         // One Product -> Many SaleItems
         public ICollection<SaleItem> SaleItems { get; set; }
             = new List<SaleItem>();
+
+        // Soft delete / archive flag (ensures past sales receipts never break when a product is deleted)
+        public bool IsArchived { get; set; } = false;
     }
 }

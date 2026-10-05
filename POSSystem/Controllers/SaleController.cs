@@ -248,14 +248,23 @@ namespace POSSystem.Controllers
             string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
             string currentUserName = User.Identity?.Name ?? "User";
 
-            ViewBag.Customers = new SelectList(_context.Customers.OrderBy(c => c.Name).ToList(), "CustomerId", "Name");
+            var customerList = _context.Customers
+                .OrderBy(c => c.Name)
+                .Select(c => new
+                {
+                    c.CustomerId,
+                    DisplayName = $"{c.Name} ({c.Phone})"
+                })
+                .ToList();
+
+            ViewBag.Customers = new SelectList(customerList, "CustomerId", "DisplayName");
             ViewBag.CurrentCashierId = currentUserId;
             ViewBag.CurrentCashierName = currentUserName;
 
             // Products available in stock (with Category & SKU for barcode scanning and GST calculation)
             ViewBag.AvailableProducts = _context.Products
                 .Include(p => p.Category)
-                .Where(p => p.StockQuantity > 0)
+                .Where(p => !p.IsArchived && p.StockQuantity > 0)
                 .OrderBy(p => p.Name)
                 .ToList();
 

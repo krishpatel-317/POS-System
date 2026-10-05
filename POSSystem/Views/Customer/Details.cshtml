@@ -1,0 +1,192 @@
+@model POSSystem.Models.Customer
+@{
+    ViewData["Title"] = $"{Model.Name} - Customer Profile";
+    decimal totalSpent = ViewBag.TotalSpent ?? 0m;
+    int totalOrders = ViewBag.TotalOrders ?? 0;
+    decimal avgTicket = ViewBag.AverageTicket ?? 0m;
+}
+
+<div class="mb-3">
+    <a asp-action="Index" class="btn-light-pill">
+        <i class="fa-solid fa-arrow-left"></i> Back to Customers
+    </a>
+</div>
+
+<!-- ═══ Customer Overview Header ═══ -->
+<div class="card-theme mb-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width:60px;height:60px;border-radius:50%;background:var(--accent-coral);color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;box-shadow:0 8px 16px rgba(235,87,61,0.25);">
+                @(Model.Name.Length > 0 ? Model.Name.Substring(0, 1).ToUpper() : "C")
+            </div>
+            <div>
+                <h4 style="font-weight:800;color:var(--text-title);margin:0;letter-spacing:-0.5px;">
+                    @Model.Name
+                </h4>
+                <div class="d-flex flex-wrap align-items-center gap-3 mt-1" style="font-size:13px;color:var(--text-subtle);">
+                    <span><i class="fa-solid fa-phone text-muted me-1"></i>@Model.Phone</span>
+                    @if (!string.IsNullOrEmpty(Model.Email))
+                    {
+                        <span>&bull;</span>
+                        <span><i class="fa-regular fa-envelope text-muted me-1"></i>@Model.Email</span>
+                    }
+                    <span>&bull;</span>
+                    <span class="pill-badge pill-gray">Customer ID #@Model.CustomerId</span>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn-light-pill">
+                <i class="fa-solid fa-pen-to-square"></i> Edit Profile
+            </a>
+            <a asp-controller="Sale" asp-action="Create" class="btn-coral">
+                <i class="fa-solid fa-cash-register"></i> New Sale
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ KPI Financial Summary ═══ -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card-theme mb-0 p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <div style="font-size:12px;font-weight:700;color:var(--text-subtle);text-transform:uppercase;letter-spacing:0.5px;">
+                    Lifetime Spend
+                </div>
+                <div style="font-size:24px;font-weight:800;color:var(--text-title);margin-top:2px;">
+                    &#8377;@totalSpent.ToString("N2")
+                </div>
+            </div>
+            <div style="width:48px;height:48px;border-radius:50%;background:var(--accent-soft);color:var(--accent-coral);display:flex;align-items:center;justify-content:center;font-size:18px;">
+                <i class="fa-solid fa-indian-rupee-sign"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-theme mb-0 p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <div style="font-size:12px;font-weight:700;color:var(--text-subtle);text-transform:uppercase;letter-spacing:0.5px;">
+                    Completed Orders
+                </div>
+                <div style="font-size:24px;font-weight:800;color:var(--text-title);margin-top:2px;">
+                    @totalOrders <span style="font-size:13px;font-weight:500;color:var(--text-subtle);">receipts</span>
+                </div>
+            </div>
+            <div style="width:48px;height:48px;border-radius:50%;background:var(--pill-gray);color:var(--dark-charcoal);display:flex;align-items:center;justify-content:center;font-size:18px;">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-theme mb-0 p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <div style="font-size:12px;font-weight:700;color:var(--text-subtle);text-transform:uppercase;letter-spacing:0.5px;">
+                    Average Order Value
+                </div>
+                <div style="font-size:24px;font-weight:800;color:var(--text-title);margin-top:2px;">
+                    &#8377;@avgTicket.ToString("N2")
+                </div>
+            </div>
+            <div style="width:48px;height:48px;border-radius:50%;background:#eafaf1;color:#1e824c;display:flex;align-items:center;justify-content:center;font-size:18px;">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Historical Sales & Receipts ═══ -->
+<div class="card-theme">
+    <div class="card-theme-header">
+        <div>
+            <h5 class="card-theme-title">
+                <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-coral);"></i> Purchase History
+            </h5>
+            <p style="font-size:13px;color:var(--text-subtle);margin:2px 0 0;">
+                All transactions, itemized sales, and printable thermal receipts for this customer.
+            </p>
+        </div>
+    </div>
+
+    @if (Model.Sales == null || !Model.Sales.Any())
+    {
+        <div class="text-center py-5">
+            <div style="width:54px;height:54px;background:var(--pill-gray);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--text-subtle);">
+                <i class="fa-solid fa-receipt fa-lg"></i>
+            </div>
+            <div style="font-weight:700;font-size:15px;color:var(--text-title);">No purchase history yet</div>
+            <p style="font-size:13px;color:var(--text-subtle);margin-top:2px;">When this customer makes a purchase at the POS counter, receipts will be tracked here.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Date &amp; Time</th>
+                        <th>Items Count</th>
+                        <th>Payment Method</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th class="text-end">Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sale in Model.Sales.OrderByDescending(s => s.SaleDate))
+                    {
+                        bool isVoided = sale.Status == "Voided";
+                        int itemsCount = sale.SaleItems?.Sum(i => i.Quantity) ?? 0;
+
+                        <tr style="@(isVoided ? "opacity:0.65;background:#fcfbf9;" : "")">
+                            <td>
+                                <span class="pill-badge pill-gray" style="font-weight:700;">#@sale.SaleId</span>
+                            </td>
+                            <td>
+                                <div style="font-weight:600;color:var(--text-title);font-size:13px;">
+                                    @sale.SaleDate.ToString("dd MMM yyyy")
+                                </div>
+                                <div style="font-size:12px;color:var(--text-subtle);">
+                                    @sale.SaleDate.ToString("hh:mm tt")
+                                </div>
+                            </td>
+                            <td>
+                                <span style="font-size:13px;color:var(--text-body);">
+                                    <i class="fa-solid fa-box text-muted me-1"></i>@itemsCount @(itemsCount == 1 ? "unit" : "units")
+                                </span>
+                            </td>
+                            <td>
+                                <span class="pill-badge pill-gray">
+                                    <i class="fa-solid fa-credit-card me-1"></i>@(sale.Payment?.PaymentMethod ?? "Cash")
+                                </span>
+                            </td>
+                            <td>
+                                <span style="font-weight:800;color:var(--text-title);font-size:14px;">
+                                    &#8377;@sale.TotalAmount.ToString("N2")
+                                </span>
+                            </td>
+                            <td>
+                                @if (isVoided)
+                                {
+                                    <span class="pill-badge pill-coral" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;">
+                                        <i class="fa-solid fa-ban"></i> Voided
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="pill-badge pill-green">Paid</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-controller="Sale" asp-action="Details" asp-route-id="@sale.SaleId" class="btn-dark-pill" style="font-size:12px;padding:6px 14px;">
+                                    <i class="fa-solid fa-receipt"></i> View Receipt
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

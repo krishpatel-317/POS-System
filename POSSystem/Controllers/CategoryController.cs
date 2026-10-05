@@ -113,7 +113,7 @@ namespace POSSystem.Controllers
             return View(category);
         }
 
-        // 7. DELETE (Remove from Database - Admin, Manager)
+        // 7. DELETE (Smart Reassignment: Reassigns products to 'General' fallback, removes category)
         [HttpPost, ActionName("Delete")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -121,17 +121,45 @@ namespace POSSystem.Controllers
             var category = await _context.Categories.Include(c => c.Products).FirstOrDefaultAsync(c => c.CategoryId == id);
             if (category == null) return NotFound();
 
-            // Simple check: don't delete if it has products
+            // Guard the default root category
+            if (category.Name.Equals("General", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Error"] = "The default 'General' department cannot be deleted.";
+                return RedirectToAction("Index");
+            }
+
+            int productCount = category.Products?.Count ?? 0;
+
+            // Smart Reassignment: Find or create the default 'General' department
+            var generalCategory = await _context.Categories.FirstOrDefaultAsync(c => c.Name == "General");
+            if (generalCategory == null)
+            {
+                generalCategory = new Category { Name = "General", GSTRate = 18m };
+                _context.Categories.Add(generalCategory);
+                await _context.SaveChangesAsync();
+            }
+
+            // Move any products inside this category to General
             if (category.Products != null && category.Products.Count > 0)
             {
-                TempData["Error"] = "Cannot delete this category because it has products inside it.";
-                return RedirectToAction("Index");
+                foreach (var prod in category.Products)
+                {
+                    prod.CategoryId = generalCategory.CategoryId;
+                }
             }
 
             _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
             
-            TempData["Success"] = "Category deleted!";
+            if (productCount > 0)
+            {
+                TempData["Success"] = $"Category '{category.Name}' deleted! Its {productCount} product(s) were safely moved to 'General'.";
+            }
+            else
+            {
+                TempData["Success"] = $"Category '{category.Name}' deleted!";
+            }
+
             return RedirectToAction("Index");
         }
     }

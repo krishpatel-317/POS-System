@@ -20,7 +20,7 @@ namespace POSSystem.Controllers
         // 1. READ (All staff can view products to check stock, price, and category)
         public async Task<IActionResult> Index(string search, int categoryId)
         {
-            var query = _context.Products.Include(p => p.Category).AsQueryable();
+            var query = _context.Products.Where(p => !p.IsArchived).Include(p => p.Category).AsQueryable();
 
             if (search != null)
             {
@@ -59,20 +59,20 @@ namespace POSSystem.Controllers
             string trimmedName = product.Name?.Trim() ?? string.Empty;
             string trimmedSku = product.SKU?.Trim() ?? string.Empty;
 
-            // 1. Case-insensitive duplicate product name validation
+            // 1. Case-insensitive duplicate product name validation among active products
             if (!string.IsNullOrEmpty(trimmedName))
             {
-                bool nameExists = await _context.Products.AnyAsync(p => p.Name.ToLower() == trimmedName.ToLower());
+                bool nameExists = await _context.Products.AnyAsync(p => !p.IsArchived && p.Name.ToLower() == trimmedName.ToLower());
                 if (nameExists)
                 {
                     ModelState.AddModelError("Name", $"A product named '{trimmedName}' already exists (names are case-insensitive).");
                 }
             }
 
-            // 2. Barcode / SKU uniqueness validation (if SKU is provided)
+            // 2. Barcode / SKU uniqueness validation among active products
             if (!string.IsNullOrEmpty(trimmedSku))
             {
-                bool skuExists = await _context.Products.AnyAsync(p => p.SKU.ToLower() == trimmedSku.ToLower());
+                bool skuExists = await _context.Products.AnyAsync(p => !p.IsArchived && p.SKU.ToLower() == trimmedSku.ToLower());
                 if (skuExists)
                 {
                     ModelState.AddModelError("SKU", $"Barcode / SKU '{trimmedSku}' is already assigned to another product.");
@@ -83,6 +83,7 @@ namespace POSSystem.Controllers
             {
                 product.Name = trimmedName;
                 product.SKU = trimmedSku;
+                product.IsArchived = false;
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
                 
@@ -99,7 +100,7 @@ namespace POSSystem.Controllers
         public async Task<IActionResult> Edit(int id)
         {
             var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
+            if (product == null || product.IsArchived) return NotFound();
 
             ViewBag.Categories = GetCategorySelectList(product.CategoryId);
             return View(product);
@@ -119,7 +120,7 @@ namespace POSSystem.Controllers
             // 1. Case-insensitive duplicate product name validation (excluding current product)
             if (!string.IsNullOrEmpty(trimmedName))
             {
-                bool nameExists = await _context.Products.AnyAsync(p => p.ProductId != product.ProductId && p.Name.ToLower() == trimmedName.ToLower());
+                bool nameExists = await _context.Products.AnyAsync(p => !p.IsArchived && p.ProductId != product.ProductId && p.Name.ToLower() == trimmedName.ToLower());
                 if (nameExists)
                 {
                     ModelState.AddModelError("Name", $"Another product named '{trimmedName}' already exists (names are case-insensitive).");
@@ -129,7 +130,7 @@ namespace POSSystem.Controllers
             // 2. Barcode / SKU uniqueness validation (excluding current product)
             if (!string.IsNullOrEmpty(trimmedSku))
             {
-                bool skuExists = await _context.Products.AnyAsync(p => p.ProductId != product.ProductId && p.SKU.ToLower() == trimmedSku.ToLower());
+                bool skuExists = await _context.Products.AnyAsync(p => !p.IsArchived && p.ProductId != product.ProductId && p.SKU.ToLower() == trimmedSku.ToLower());
                 if (skuExists)
                 {
                     ModelState.AddModelError("SKU", $"Barcode / SKU '{trimmedSku}' is already assigned to another product.");
@@ -139,7 +140,7 @@ namespace POSSystem.Controllers
             if (ModelState.IsValid)
             {
                 var existing = await _context.Products.FindAsync(product.ProductId);
-                if (existing == null) return NotFound();
+                if (existing == null || existing.IsArchived) return NotFound();
 
                 existing.Name = trimmedName;
                 existing.SKU = trimmedSku;
@@ -176,13 +177,13 @@ namespace POSSystem.Controllers
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Delete(int id)
         {
-            var product = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(p => p.ProductId == id);
+            var product = await _context.Products.Include(p => p.Category).Include(p => p.SaleItems).FirstOrDefaultAsync(p => p.ProductId == id && !p.IsArchived);
             if (product == null) return NotFound();
 
             return View(product);
         }
 
-        // 7. DELETE (Remove from Database with SaleItem guard)
+        // 7. DELETE (Smart Deletion: safely archives sold items to keep receipts, deletes unsold items completely)
         [HttpPost, ActionName("Delete")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -190,17 +191,23 @@ namespace POSSystem.Controllers
             var product = await _context.Products.Include(p => p.SaleItems).FirstOrDefaultAsync(p => p.ProductId == id);
             if (product == null) return NotFound();
 
-            // Delete Guard: Cannot delete product if it was sold in historical transactions
+            // If product was sold in past transactions: Soft archive so past bills never crash
             if (product.SaleItems != null && product.SaleItems.Count > 0)
             {
-                TempData["Error"] = $"Cannot delete product '{product.Name}' because it exists in past sales receipts. Archive or reduce stock to 0 instead.";
+                product.IsArchived = true;
+                product.StockQuantity = 0;
+                product.SKU = string.Empty; // Free up SKU/barcode so it can be reused
+                await _context.SaveChangesAsync();
+                
+                TempData["Success"] = $"Product '{product.Name}' removed from catalog. Past sales receipts were preserved.";
                 return RedirectToAction("Index");
             }
 
+            // If product was never sold: Hard delete completely
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
             
-            TempData["Success"] = $"Product '{product.Name}' deleted from inventory.";
+            TempData["Success"] = $"Product '{product.Name}' deleted.";
             return RedirectToAction("Index");
         }
 

@@ -238,24 +238,45 @@ namespace POSSystem.Controllers
             });
         }
 
-        // 7. DELETE (Delete staff account with sales protection)
+        // 7. DELETE (Smart Unlink: Safely unlinks past sales so sales history stays intact, removes staff account)
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            // Delete Guard: Cannot delete staff who has processed sales
-            bool hasSales = await _context.Sales.AnyAsync(s => s.UserId == id);
-            if (hasSales)
+            // Prevent deleting the currently logged-in account
+            string currentUserId = _userManager.GetUserId(User) ?? string.Empty;
+            if (user.Id == currentUserId)
             {
-                int salesCount = await _context.Sales.CountAsync(s => s.UserId == id);
-                TempData["Error"] = $"Cannot remove staff member '{user.UserName}' because they have processed {salesCount} sales transaction(s). Sales history must remain intact.";
+                TempData["Error"] = "You cannot delete your own logged-in account.";
                 return RedirectToAction("Index");
             }
 
+            var pastSales = await _context.Sales.Where(s => s.UserId == id).ToListAsync();
+            int salesCount = pastSales.Count;
+
+            // Smart Unlink: Reassign their past sales to former staff (UserId = null) so receipts don't break
+            if (salesCount > 0)
+            {
+                foreach (var sale in pastSales)
+                {
+                    sale.UserId = null;
+                }
+                await _context.SaveChangesAsync();
+            }
+
             await _userManager.DeleteAsync(user);
-            TempData["Success"] = $"Staff member '{user.UserName}' deleted.";
+
+            if (salesCount > 0)
+            {
+                TempData["Success"] = $"Staff member '{user.UserName}' deleted. Their {salesCount} processed sale(s) were safely retained in store records.";
+            }
+            else
+            {
+                TempData["Success"] = $"Staff member '{user.UserName}' deleted.";
+            }
+
             return RedirectToAction("Index");
         }
     }

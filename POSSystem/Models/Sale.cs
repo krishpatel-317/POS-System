@@ -41,9 +41,9 @@ namespace POSSystem.Models
 
         public Customer? Customer { get; set; }
 
-        // User/Cashier Foreign Key (IdentityUser)
+        // User/Cashier Foreign Key (IdentityUser) - nullable so past sales are retained if staff user is deleted
         [ForeignKey("User")]
-        public string UserId { get; set; } = string.Empty;
+        public string? UserId { get; set; }
 
         public Microsoft.AspNetCore.Identity.IdentityUser? User { get; set; }
 
