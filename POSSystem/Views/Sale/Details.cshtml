@@ -107,7 +107,16 @@
                         <div style="font-weight:700;font-size:15px;color:var(--accent-coral);margin-top:2px;">
                             @(Model.Payment?.PaymentMethod ?? "Cash")
                         </div>
-                        <small style="color:var(--text-subtle);font-size:12px;">Status: @Model.Status</small>
+                        @if (!string.IsNullOrEmpty(Model.Payment?.RazorpayPaymentId))
+                        {
+                            <small style="color:#166534;font-size:11px;font-weight:700;display:block;word-break:break-all;">
+                                <i class="fa-solid fa-circle-check"></i> Ref: @Model.Payment.RazorpayPaymentId
+                            </small>
+                        }
+                        else
+                        {
+                            <small style="color:var(--text-subtle);font-size:12px;">Status: @Model.Status</small>
+                        }
                     </div>
                 </div>
             </div>

@@ -14,11 +14,13 @@ namespace POSSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IConfiguration _configuration;
 
-        public SaleController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
+        public SaleController(ApplicationDbContext context, UserManager<IdentityUser> userManager, IConfiguration configuration)
         {
             _context = context;
             _userManager = userManager;
+            _configuration = configuration;
         }
 
         // 1. READ & FILTER (Defaults to showing only the logged-in user's sales, with option to view all store sales)
@@ -262,11 +264,55 @@ namespace POSSystem.Controllers
 
             // Payment methods populated from PaymentMethodType Enum
             ViewBag.PaymentMethods = new SelectList(Enum.GetNames<PaymentMethodType>());
+            ViewBag.RazorpayKeyId = _configuration["Razorpay:KeyId"] ?? "rzp_test_TkaWkDKBinBjUB";
             
             return View();
         }
 
-        // 6. CREATE (Process Cart Checkout with Category-based GST Tax & Discount)
+        // 6. CREATE RAZORPAY ORDER (Called by AJAX before showing Razorpay UPI / Payment Modal)
+        [HttpPost]
+        public IActionResult CreateRazorpayOrder([FromBody] RazorpayOrderRequest request)
+        {
+            if (request == null || request.Amount <= 0)
+            {
+                return BadRequest(new { success = false, message = "Invalid amount." });
+            }
+
+            try
+            {
+                string keyId = _configuration["Razorpay:KeyId"] ?? "rzp_test_TkaWkDKBinBjUB";
+                string keySecret = _configuration["Razorpay:KeySecret"] ?? "qXODO9ML9Ed85dKn8YPfY3Kj";
+
+                var client = new Razorpay.Api.RazorpayClient(keyId, keySecret);
+
+                // Amount in paise: e.g. ₹100.50 -> 10050 paise
+                int amountInPaise = (int)Math.Round(request.Amount * 100m);
+
+                var options = new Dictionary<string, object>
+                {
+                    { "amount", amountInPaise },
+                    { "currency", "INR" },
+                    { "receipt", $"rcpt_{DateTime.Now.Ticks}" }
+                };
+
+                var order = client.Order.Create(options);
+                string orderId = order["id"].ToString();
+
+                return Json(new
+                {
+                    success = true,
+                    orderId = orderId,
+                    amount = amountInPaise,
+                    keyId = keyId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // 7. CREATE (Process Cart Checkout with Category-based GST Tax & Discount)
         [HttpPost]
         public IActionResult Create(
             int? customerId, 
@@ -276,7 +322,10 @@ namespace POSSystem.Controllers
             decimal? taxPercentage,
             List<int> productIds, 
             List<int> quantities, 
-            List<decimal> unitPrices)
+            List<decimal> unitPrices,
+            string? razorpayOrderId,
+            string? razorpayPaymentId,
+            string? razorpaySignature)
         {
             if (User.IsInRole("Admin"))
             {
@@ -420,8 +469,32 @@ namespace POSSystem.Controllers
             {
                 Amount = grandTotal,
                 PaymentMethod = validatedPaymentMethod,
-                PaymentDate = DateTime.Now
+                PaymentDate = DateTime.Now,
+                RazorpayOrderId = razorpayOrderId,
+                RazorpayPaymentId = razorpayPaymentId,
+                RazorpaySignature = razorpaySignature
             };
+
+            // Optional cryptographic verification if Razorpay was used
+            if (!string.IsNullOrEmpty(razorpayOrderId) && !string.IsNullOrEmpty(razorpayPaymentId) && !string.IsNullOrEmpty(razorpaySignature))
+            {
+                try
+                {
+                    string keySecret = _configuration["Razorpay:KeySecret"] ?? "qXODO9ML9Ed85dKn8YPfY3Kj";
+                    var attributes = new Dictionary<string, string>
+                    {
+                        { "razorpay_order_id", razorpayOrderId },
+                        { "razorpay_payment_id", razorpayPaymentId },
+                        { "razorpay_signature", razorpaySignature }
+                    };
+                    Razorpay.Api.Utils.verifyPaymentSignature(attributes);
+                }
+                catch (Exception ex)
+                {
+                    TempData["Error"] = "Razorpay payment signature verification failed: " + ex.Message;
+                    return RedirectToAction("Create");
+                }
+            }
 
             // 6. Save entire graph in a single atomic database commit
             _context.Sales.Add(sale);
@@ -430,5 +503,10 @@ namespace POSSystem.Controllers
             TempData["Success"] = $"Sale #{sale.SaleId} recorded successfully! Billed ₹{grandTotal:N2}.";
             return RedirectToAction("Details", new { id = sale.SaleId });
         }
+    }
+
+    public class RazorpayOrderRequest
+    {
+        public decimal Amount { get; set; }
     }
 }

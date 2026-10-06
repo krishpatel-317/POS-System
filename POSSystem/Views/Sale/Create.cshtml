@@ -133,9 +133,17 @@
                 <!-- Payment Method -->
                 <div class="mb-3">
                     <label class="form-label">Payment Method <span class="text-danger">*</span></label>
-                    <select name="paymentMethod" class="form-select" asp-items="ViewBag.PaymentMethods" required>
+                    <select name="paymentMethod" id="paymentMethodSelect" class="form-select" asp-items="ViewBag.PaymentMethods" required>
                     </select>
+                    <small id="razorpayHint" class="text-success mt-1" style="font-size:11px;display:none;font-weight:600;">
+                        <i class="fa-solid fa-qrcode"></i> Powered by Razorpay: Live UPI QR, Cards &amp; Netbanking popup.
+                    </small>
                 </div>
+
+                <!-- Hidden Razorpay Transaction Attributes -->
+                <input type="hidden" name="razorpayOrderId" id="razorpayOrderId" value="" />
+                <input type="hidden" name="razorpayPaymentId" id="razorpayPaymentId" value="" />
+                <input type="hidden" name="razorpaySignature" id="razorpaySignature" value="" />
 
                 <!-- Discount Selector -->
                 <div class="mb-3">
@@ -480,7 +488,23 @@
         updateCartUI();
     });
 
-    // 6. Form Submission: serialize cart arrays into hidden inputs
+    // Payment method hint & UI update
+    function checkPaymentMethod() {
+        const method = $('#paymentMethodSelect').val();
+        if (method === 'UPI' || method === 'Card') {
+            $('#razorpayHint').show();
+            $('#btnCheckout').html('<i class="fa-solid fa-qrcode me-1"></i> Pay with Razorpay &amp; Save');
+        } else {
+            $('#razorpayHint').hide();
+            $('#btnCheckout').html('<i class="fa-solid fa-check me-1"></i> Complete &amp; Save Sale');
+        }
+    }
+    $('#paymentMethodSelect').change(checkPaymentMethod);
+    checkPaymentMethod();
+
+    // 6. Form Submission: serialize cart arrays into hidden inputs & launch Razorpay if UPI/Card
+    let isRazorpayVerified = false;
+
     $('#checkoutForm').submit(function (e) {
         if (cart.length === 0) {
             e.preventDefault();
@@ -497,7 +521,89 @@
             container.append(`<input type="hidden" name="unitPrices" value="${item.price}" />`);
         });
 
-        return true;
+        const selectedPayment = $('#paymentMethodSelect').val();
+
+        // If Cash or already verified by Razorpay modal, submit form directly
+        if (selectedPayment === 'Cash' || isRazorpayVerified) {
+            return true;
+        }
+
+        // If UPI or Card, launch official Razorpay Checkout Modal
+        e.preventDefault();
+
+        const payableText = $('#summaryPayable').text().replace('₹', '').replace(',', '');
+        const payableAmount = parseFloat(payableText);
+
+        if (isNaN(payableAmount) || payableAmount <= 0) {
+            alert('Invalid order payable amount.');
+            return false;
+        }
+
+        const btn = $('#btnCheckout');
+        const originalText = btn.html();
+        btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Launching Razorpay...');
+
+        // Step A: Request server to create Razorpay Order
+        $.ajax({
+            url: '/Sale/CreateRazorpayOrder',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ amount: payableAmount }),
+            success: function (res) {
+                btn.prop('disabled', false).html(originalText);
+
+                if (!res.success) {
+                    alert(res.message || 'Failed to initiate Razorpay order.');
+                    return;
+                }
+
+                // Step B: Configure Razorpay Checkout Modal
+                const options = {
+                    "key": res.keyId,
+                    "amount": res.amount,
+                    "currency": "INR",
+                    "name": "Smart Retail POS",
+                    "description": "Counter Sale Invoice",
+                    "image": "/images/logo.png?v=3",
+                    "order_id": res.orderId,
+                    "handler": function (response) {
+                        // Step C: Payment Succeeded! Attach tokens and submit form
+                        $('#razorpayOrderId').val(response.razorpay_order_id);
+                        $('#razorpayPaymentId').val(response.razorpay_payment_id);
+                        $('#razorpaySignature').val(response.razorpay_signature);
+
+                        isRazorpayVerified = true;
+                        $('#checkoutForm').submit();
+                    },
+                    "prefill": {
+                        "name": $('#customerSelect option:selected').text().split('(')[0].trim() || "Retail Customer",
+                        "contact": ""
+                    },
+                    "theme": {
+                        "color": "#eb573d"
+                    },
+                    "modal": {
+                        "ondismiss": function() {
+                            btn.prop('disabled', false).html(originalText);
+                        }
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (response) {
+                    alert('Payment Failed: ' + response.error.description);
+                    btn.prop('disabled', false).html(originalText);
+                });
+                rzp.open();
+            },
+            error: function () {
+                btn.prop('disabled', false).html(originalText);
+                alert('Server error occurred while creating Razorpay order.');
+            }
+        });
+
+        return false;
     });
 </script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 }
