@@ -148,7 +148,7 @@
                 <!-- Discount Selector -->
                 <div class="mb-3">
                     <label class="form-label">Discount Offer</label>
-                    <select id="discountSelect" name="discountPercentage" class="form-select">
+                    <select id="discountSelect" name="discountPercentage" class="form-select" onchange="updateCartUI()">
                         <option value="0">No Discount (0%)</option>
                         <option value="5">Festive Offer (5% Off)</option>
                         <option value="10">Loyalty Special (10% Off)</option>
@@ -175,7 +175,7 @@
                         <span style="color:var(--text-subtle);">Items Subtotal:</span>
                         <span id="summarySubtotal" style="font-weight:700;">&#8377;0.00</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-1" id="discountRow" style="color:#166534;display:none;">
+                    <div class="justify-content-between mb-1" id="discountRow" style="display:none;color:#166534;">
                         <span>Discount (<span id="discountPctLabel">0</span>%):</span>
                         <span id="summaryDiscount" style="font-weight:700;">-&#8377;0.00</span>
                     </div>
@@ -417,7 +417,9 @@
             $('#summaryTax').text('+₹0.00');
             $('#summaryPayable').text('₹0.00');
             $('#effectiveTaxBadge').text('Auto-calculated');
-            $('#discountRow').hide();
+            $('#discountPctLabel').text('0');
+            $('#summaryDiscount').text('-₹0.00');
+            $('#discountRow').css('display', 'none');
             return;
         }
 
@@ -473,18 +475,20 @@
         if (discountPct > 0) {
             $('#discountPctLabel').text(discountPct);
             $('#summaryDiscount').text('-₹' + discountAmt.toFixed(2));
-            $('#discountRow').show();
+            $('#discountRow').css('display', 'flex');
         } else {
-            $('#discountRow').hide();
+            $('#discountPctLabel').text('0');
+            $('#summaryDiscount').text('-₹0.00');
+            $('#discountRow').css('display', 'none');
         }
 
-        $('#effectiveTaxBadge').text('~' + effectiveTaxPct + '% Effective GST');
+        $('#effectiveTaxBadge').text(effectiveTaxPct + '% Effective GST');
         $('#summaryTax').text('+₹' + totalTax.toFixed(2));
         $('#summaryPayable').text('₹' + grandTotal.toFixed(2));
     }
 
     // Listener for discount offer change
-    $('#discountSelect').change(function () {
+    $('#discountSelect').on('change input', function () {
         updateCartUI();
     });
 
